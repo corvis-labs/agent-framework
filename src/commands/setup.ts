@@ -3,6 +3,7 @@ import * as fs from 'fs-extra';
 import ora from 'ora';
 import chalk from 'chalk';
 import { execSync } from 'child_process';
+import inquirer from 'inquirer';
 
 /** spec-kit extensions to install via `specify extension add <name> --from <zip>` */
 const SPECKIT_PLUGINS = [
@@ -150,11 +151,14 @@ export async function ensureBeads(spinner?: ReturnType<typeof ora>): Promise<boo
 }
 
 /**
- * Install spec-kit extensions: brownfield, fleet, superpowers-bridge.
+ * Install spec-kit extensions: brownfield (optional), fleet, superpowers-bridge.
  * Uses `specify extension add <name> --from <zip-url>` (community catalog
  * extensions are not directly installable, so we supply the GitHub archive).
  */
-export async function installSpecKitPlugins(spinner?: ReturnType<typeof ora>): Promise<string[]> {
+export async function installSpecKitPlugins(
+  opts: { includeBrownfield?: boolean } = {},
+  spinner?: ReturnType<typeof ora>,
+): Promise<string[]> {
   const s = spinner || ora('Installing spec-kit extensions...').start();
   const installed: string[] = [];
 
@@ -163,7 +167,11 @@ export async function installSpecKitPlugins(spinner?: ReturnType<typeof ora>): P
     return installed;
   }
 
-  for (const plugin of SPECKIT_PLUGINS) {
+  const pluginsToInstall = SPECKIT_PLUGINS.filter(
+    (p) => p.name !== 'brownfield' || opts.includeBrownfield !== false,
+  );
+
+  for (const plugin of pluginsToInstall) {
     s.text = `Installing spec-kit extension: ${plugin.name}...`;
     try {
       execSync(`specify extension add ${plugin.name} --from "${plugin.zipUrl}"`, {
@@ -347,6 +355,44 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   console.log(chalk.green(`  Python: ${python.version}`));
   console.log('');
 
+  // ── Interactive questions ────────────────────────────────────────────────
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'projectType',
+      message: 'What type of project are you setting up?',
+      choices: [
+        {
+          name: `${chalk.cyan('Greenfield')} — brand-new project (spec-kit core only)`,
+          value: 'greenfield',
+        },
+        {
+          name: `${chalk.cyan('Brownfield')} — existing codebase (adds brownfield onboarding extension)`,
+          value: 'brownfield',
+        },
+      ],
+    },
+    {
+      type: 'list',
+      name: 'memoryBackend',
+      message: 'Which memory / context backend do you want?',
+      choices: [
+        {
+          name: `${chalk.cyan('Git-based')}  — lightweight, zero extra tooling; stores context in plain files tracked by git`,
+          value: 'git',
+        },
+        {
+          name: `${chalk.cyan('Beads-based')} — advanced semantic memory with chunking, search & structured context (requires bd CLI)`,
+          value: 'beads',
+        },
+      ],
+    },
+  ]);
+
+  const wantBrownfield  = (answers.projectType   as string) === 'brownfield';
+  const wantBeads       = (answers.memoryBackend  as string) === 'beads';
+  console.log('');
+
   // Step 3: Install spec-kit
   const specKitOk = await ensureSpecKit();
 
@@ -356,19 +402,22 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
     specKitInitOk = await setupSpecKit(projectRoot);
   }
 
-  // Step 5: Install spec-kit plugins
+  // Step 5: Install spec-kit extensions (filter based on project type)
   let plugins: string[] = [];
   if (specKitOk) {
-    plugins = await installSpecKitPlugins();
+    plugins = await installSpecKitPlugins({ includeBrownfield: wantBrownfield });
   }
 
-  // Step 6: Install beads
-  const beadsOk = await ensureBeads();
-
-  // Step 7: Initialize beads for the project
+  // Step 6: Install beads (only if user chose beads-based memory)
+  let beadsOk = false;
   let beadsInitOk = false;
-  if (beadsOk) {
-    beadsInitOk = await setupBeads(projectRoot);
+  if (wantBeads) {
+    beadsOk = await ensureBeads();
+    if (beadsOk) {
+      beadsInitOk = await setupBeads(projectRoot);
+    }
+  } else {
+    console.log(chalk.gray('  Skipping beads install (git-based memory selected).'));
   }
 
   // Summary
@@ -376,18 +425,19 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   console.log(`  spec-kit (specify):    ${specKitOk ? chalk.green('installed') : chalk.red('not installed')}`);
   console.log(`  spec-kit init:         ${specKitInitOk ? chalk.green('initialized') : chalk.yellow(specKitOk ? 'skipped' : 'n/a')}`);
   console.log(`  spec-kit plugins:      ${plugins.length > 0 ? chalk.green(plugins.join(', ')) : chalk.yellow('none')}`);
-  console.log(`  beads (bd):            ${beadsOk ? chalk.green('installed') : chalk.red('not installed')}`);
-  console.log(`  beads init:            ${beadsInitOk ? chalk.green('initialized') : chalk.yellow(beadsOk ? 'skipped' : 'n/a')}`);
+  console.log(`  beads (bd):            ${wantBeads ? (beadsOk ? chalk.green('installed') : chalk.red('not installed')) : chalk.gray('skipped (git-based memory)')}`);
+  console.log(`  beads init:            ${wantBeads ? (beadsInitOk ? chalk.green('initialized') : chalk.yellow(beadsOk ? 'failed' : 'n/a')) : chalk.gray('skipped')}`);
   console.log('');
 
-  if (specKitOk && beadsOk) {
-    console.log(chalk.green('All dependencies installed and initialized. Run ') + chalk.cyan('acli init') + chalk.green(' to scaffold your project.\n'));
+  const allOk = specKitOk && (!wantBeads || beadsOk);
+  if (allOk) {
+    console.log(chalk.green('All selected dependencies installed and initialized. Run ') + chalk.cyan('acli init') + chalk.green(' to scaffold your project.\n'));
   } else {
     console.log(chalk.yellow('Some dependencies could not be installed automatically.'));
     if (!specKitOk) {
       console.log(chalk.gray('  spec-kit: pip install spec-kit'));
     }
-    if (!beadsOk) {
+    if (wantBeads && !beadsOk) {
       console.log(chalk.gray('  beads:    npm install -g @beads/bd'));
     }
     console.log('');
