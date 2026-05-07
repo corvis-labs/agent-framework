@@ -142,6 +142,9 @@ export async function ensureBeads(spinner?: ReturnType<typeof ora>): Promise<boo
 
 /**
  * Install spec-kit plugins: brownfield, fleet, superpowers-bridge.
+ * Strategy per plugin:
+ *   1. `specify plugin install <name>` (PyPI package name)
+ *   2. `pip install "git+<repo>[#subdirectory=<path>]"` (git fallback)
  */
 export async function installSpecKitPlugins(spinner?: ReturnType<typeof ora>): Promise<string[]> {
   const s = spinner || ora('Installing spec-kit plugins...').start();
@@ -152,14 +155,32 @@ export async function installSpecKitPlugins(spinner?: ReturnType<typeof ora>): P
     return installed;
   }
 
+  const pipCmd = commandExists('pip3') ? 'pip3' : 'pip';
+
   for (const plugin of SPECKIT_PLUGINS) {
+    s.text = `Installing spec-kit plugin: ${plugin.name}...`;
+    let success = false;
+
+    // Attempt 1: specify plugin install <package-name>
     try {
-      const installSource = plugin.path
-        ? `${plugin.repo}#subdirectory=${plugin.path}`
-        : plugin.repo;
-      execSync(`specify plugin install ${installSource}`, { stdio: 'ignore', timeout: 60000 });
+      execSync(`specify plugin install ${plugin.name}`, { stdio: 'ignore', timeout: 60000 });
+      success = true;
+    } catch { /* fall through */ }
+
+    // Attempt 2: pip install git+<url>[#subdirectory=<path>]
+    if (!success) {
+      try {
+        const gitUrl = plugin.path
+          ? `git+${plugin.repo}.git#subdirectory=${plugin.path}`
+          : `git+${plugin.repo}.git`;
+        execSync(`${pipCmd} install "${gitUrl}"`, { stdio: 'ignore', timeout: 90000 });
+        success = true;
+      } catch { /* fall through */ }
+    }
+
+    if (success) {
       installed.push(plugin.name);
-    } catch {
+    } else {
       console.log(chalk.yellow(`  Warning: failed to install plugin ${plugin.name}`));
     }
   }
@@ -186,11 +207,25 @@ export async function setupSpecKit(projectRoot: string, spinner?: ReturnType<typ
     return false;
   }
 
+  // Already initialized — skip gracefully
+  const specifyDir = path.join(projectRoot, '.specify');
+  if (await fs.pathExists(specifyDir)) {
+    s.succeed('spec-kit already initialized for this project.');
+    return true;
+  }
+
   try {
-    execSync('specify init . --ai copilot', { cwd: projectRoot, stdio: 'ignore' });
+    execSync('specify init . --ai copilot', { cwd: projectRoot, stdio: 'pipe' });
     s.succeed('spec-kit initialized (specify init . --ai copilot).');
     return true;
-  } catch {
+  } catch (err: unknown) {
+    const e = err as { stderr?: Buffer; stdout?: Buffer };
+    const output = ((e.stderr?.toString() ?? '') + (e.stdout?.toString() ?? '')).toLowerCase();
+    // If already initialized despite directory not existing, treat as success
+    if (output.includes('already') || await fs.pathExists(specifyDir)) {
+      s.succeed('spec-kit already initialized for this project.');
+      return true;
+    }
     s.warn('spec-kit init failed. Run "specify init . --ai copilot" manually.');
     return false;
   }
@@ -317,24 +352,38 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   // Step 3: Install spec-kit
   const specKitOk = await ensureSpecKit();
 
-  // Step 4: Install spec-kit plugins
+  // Step 4: Initialize spec-kit for the project
+  let specKitInitOk = false;
+  if (specKitOk) {
+    specKitInitOk = await setupSpecKit(projectRoot);
+  }
+
+  // Step 5: Install spec-kit plugins
   let plugins: string[] = [];
   if (specKitOk) {
     plugins = await installSpecKitPlugins();
   }
 
-  // Step 5: Install beads
+  // Step 6: Install beads
   const beadsOk = await ensureBeads();
+
+  // Step 7: Initialize beads for the project
+  let beadsInitOk = false;
+  if (beadsOk) {
+    beadsInitOk = await setupBeads(projectRoot);
+  }
 
   // Summary
   console.log(chalk.cyan.bold('\n--- Setup Summary ---\n'));
   console.log(`  spec-kit (specify):    ${specKitOk ? chalk.green('installed') : chalk.red('not installed')}`);
+  console.log(`  spec-kit init:         ${specKitInitOk ? chalk.green('initialized') : chalk.yellow(specKitOk ? 'skipped' : 'n/a')}`);
   console.log(`  spec-kit plugins:      ${plugins.length > 0 ? chalk.green(plugins.join(', ')) : chalk.yellow('none')}`);
   console.log(`  beads (bd):            ${beadsOk ? chalk.green('installed') : chalk.red('not installed')}`);
+  console.log(`  beads init:            ${beadsInitOk ? chalk.green('initialized') : chalk.yellow(beadsOk ? 'skipped' : 'n/a')}`);
   console.log('');
 
   if (specKitOk && beadsOk) {
-    console.log(chalk.green('All dependencies installed. Run ') + chalk.cyan('acli init') + chalk.green(' to initialize your project.\n'));
+    console.log(chalk.green('All dependencies installed and initialized. Run ') + chalk.cyan('acli init') + chalk.green(' to scaffold your project.\n'));
   } else {
     console.log(chalk.yellow('Some dependencies could not be installed automatically.'));
     if (!specKitOk) {
