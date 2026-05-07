@@ -58,17 +58,23 @@ Agent Framework wraps Copilot in a **governed engineering workflow** — spec be
 
 ## The Lifecycle
 
-```
-Specify → Clarify → Plan → Checklist → Tasks
-                                         │
-                                   🚦 Human Gate
-                                         │
-Finish  ← Verify  ← Implement ← Review ← Analyze
-    │                                     │
-🚦 Human Gate                       🚦 Human Gate
-```
+Run `/acli.run <feature>` — the orchestrator drives everything. You only step in at three approval gates.
 
-Run `/acli.run <feature>` and the orchestrator drives the whole thing. You only touch it at the three approval gates.
+| # | Phase | What happens |
+|---|-------|-------------|
+| 1 | **Specify** | Constitution + feature spec authored |
+| 2 | **Clarify** | Ambiguities resolved before a line of planning |
+| 3 | **Plan** | Architecture decisions + implementation plan |
+| 4 | **Checklist** | Security, a11y, and performance gates generated |
+| 5 | **Tasks** | Prioritised, dependency-ordered task breakdown |
+| | 🚦 **Gate 1** | *You approve the plan before any code is written* |
+| 6 | **Analyze** | Cross-artifact consistency validated (spec ↔ plan ↔ tasks) |
+| | 🚦 **Gate 2** | *You confirm everything is aligned* |
+| 7 | **Review** | Cross-model plan review |
+| 8 | **Implement** | Dev + QA loop — up to 5 iterations before escalation |
+| 9 | **Verify** | Full test suite + acceptance criteria checked |
+| 10 | **Finish** | Branch cleanup, merge readiness confirmed |
+| | 🚦 **Gate 3** | *You give final approval before merge* |
 
 ---
 
