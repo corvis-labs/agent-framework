@@ -1,4 +1,4 @@
-# Agent Framework
+# Agent Framework CLI
 
 [![npm version](https://img.shields.io/npm/v/agent-framework-cli.svg?style=flat-square)](https://www.npmjs.com/package/agent-framework-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -7,195 +7,130 @@
 [![VS Code](https://img.shields.io/badge/VS%20Code-Compatible-007ACC.svg?style=flat-square&logo=visual-studio-code)](https://code.visualstudio.com/)
 [![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-Ready-000000.svg?style=flat-square&logo=github)](https://github.com/features/copilot)
 
-**Multi-agent orchestration framework for GitHub Copilot** — specification-driven development lifecycle with automated quality gates, persistent architectural memory, and human-in-the-loop governance.
+## Supercharge your agentic development — stop fiddling with agent config and start shipping.
 
-> Agent Framework transforms GitHub Copilot from a standalone code assistant into a governed engineering workflow — enforcing specifications, architecture conformance, and quality standards across every feature from inception to delivery.
+`agent-framework-cli` sets up everything you need to follow a perfect SDLC lifecycle with GitHub Copilot, in one command. Spec → Plan → Implement → Review → Ship, with quality gates and persistent memory baked in.
 
 ---
 
-## Quick Start
+## One command. Full setup.
 
 ```bash
-npm install -g agent-framework-cli    # Install globally
-acli setup                             # Verify and install dependencies
-acli init                              # Initialize in your project
+npm install -g agent-framework-cli
+acli setup
 ```
 
-Open GitHub Copilot Chat and run your first lifecycle:
+That's it. `acli setup` asks you two quick questions, installs all dependencies, and scaffolds your project. Open Copilot Chat and go:
 
 ```
 /acli.run Build a user authentication system with OAuth support
 ```
 
-The orchestrator coordinates all agents through specification, planning, implementation, review, and verification — with human approval gates at critical decision points.
+---
+
+## The Power Stack
+
+Agent Framework wires together four best-in-class tools so you don't have to:
+
+| Tool | What it does for you |
+|------|----------------------|
+| **spec-kit** | Spec-driven development engine — keeps every feature grounded in structured requirements, not vibes |
+| **Fleet** | Multi-agent orchestration — runs architect, security, dev, and QA agents in the right order with the right context |
+| **Superpowers Bridge** | Connects Copilot to brainstorming, TDD enforcement, and structured code review workflows |
+| **Beads** *(optional)* | Semantic memory across sessions — your architecture decisions, ADRs, and task state survive every conversation |
+
+> Choose **Git-based memory** (zero extra tooling, context in plain files) or **Beads-based memory** (advanced semantic search + chunking). `acli setup` asks you at install time.
 
 ---
 
-## The Problem
+## Why bother?
 
-AI coding assistants generate code fast but without process discipline. In team environments, this leads to:
+AI coding assistants write code fast but without discipline. Left unchecked:
 
-- **No specification rigor** — features built from vague prompts instead of structured requirements
-- **Architecture drift** — each session makes decisions in isolation, diverging from established patterns
-- **Missing quality enforcement** — tests skipped, security overlooked, accessibility ignored
-- **Context loss** — decisions and rationale disappear between conversations
-- **No governance** — AI-generated code ships without structured review or approval
+- Features get built from vague prompts instead of structured specs
+- Architecture drifts because every session starts fresh
+- Tests get skipped, security gets overlooked, reviews get bypassed
+- Nobody knows *why* a decision was made two weeks ago
 
-## The Solution
-
-Agent Framework addresses these gaps by wrapping GitHub Copilot in a **managed development lifecycle**:
-
-| Challenge | How It's Solved |
-|-----------|----------------|
-| Unstructured requirements | Features begin as **technology-agnostic specifications** with acceptance criteria and priority rankings |
-| Architecture drift | A **project constitution** and **reference architecture** are loaded before every agent action |
-| No quality enforcement | **Security, accessibility, and performance checklists** are generated and validated before implementation |
-| Context loss | **Persistent memory** via beads — decisions, architecture, and task state survive across sessions |
-| No governance | **Three human gates** — mandatory approval before implementation, after analysis, and before merge |
+Agent Framework wraps Copilot in a **governed engineering workflow** — spec before code, review before merge, memory that persists.
 
 ---
 
-## Agents
-
-5 specialized agents collaborate through structured handoffs:
-
-| Agent | Responsibility | Capabilities |
-|-------|---------------|--------------|
-| `orchestrator` | Lifecycle governance | Project state detection, phase routing, gate enforcement, parallel task coordination |
-| `architect` | Specification & design | Requirements elicitation, tech-agnostic specs, architecture plans, ADRs, ambiguity resolution |
-| `security` | Security assurance | OWASP checklists, authentication/data flow review, threat modeling, vulnerability analysis |
-| `development` | Implementation | TDD, code generation, refactoring, plan-conformant implementation, handover management |
-| `qa` | Quality & verification | Code review, test generation, coverage analysis, standards enforcement, acceptance validation |
-
-Each agent loads the project constitution, reference architecture, and quality standards before acting — ensuring consistent, architecture-aware decisions regardless of which model or session is active.
-
----
-
-## Commands
-
-### Core workflow — daily usage
-
-| Command | Purpose |
-|---------|---------|
-| `/acli.run <feature>` | Execute the full lifecycle: specify → plan → implement → verify → ship |
-| `/acli.implement` | Begin implementation with iterative review loop |
-| `/acli.onboard` | Onboard an existing codebase (brownfield adoption) |
-
-### Specification & planning
-
-| Command | Purpose |
-|---------|---------|
-| `/acli.constitution` | Define project principles, constraints, and architectural boundaries |
-| `/acli.specify <feature>` | Author a technology-agnostic feature specification with acceptance criteria |
-| `/acli.clarify` | Resolve specification ambiguities through targeted questions |
-| `/acli.plan` | Generate technical implementation plan with architecture decision records |
-| `/acli.checklist` | Produce security, accessibility, and performance quality gates |
-| `/acli.tasks` | Create prioritized, dependency-ordered task breakdown |
-| `/acli.analyze` | Validate cross-artifact consistency (spec ↔ plan ↔ tasks) |
-
-### Review & delivery
-
-| Command | Purpose |
-|---------|---------|
-| `/acli.critique` | Perform spec-aligned code review with severity ratings |
-| `/acli.respond` | Address review feedback systematically |
-| `/acli.debug <issue>` | Structured root-cause analysis |
-| `/acli.finish` | Branch cleanup, verification, and merge readiness |
-
-### Scaffolding
-
-| Command | Purpose |
-|---------|---------|
-| `/acli.create.agent` | Scaffold a custom agent with YAML frontmatter configuration |
-| `/acli.create.skill` | Scaffold a reusable skill definition |
-
----
-
-## Development Lifecycle
-
-Running `/acli.run` orchestrates your feature through a 10-phase governed lifecycle:
+## The Lifecycle
 
 ```
-  Specify ──▶ Clarify ──▶ Plan ──▶ Checklist ──▶ Tasks
-                                                    │
-                                              HUMAN GATE
-                                                    │
-  Finish ◀── Verify ◀── Implement ◀── Review ◀── Analyze
-                │                                   │
-           HUMAN GATE                          HUMAN GATE
+Specify → Clarify → Plan → Checklist → Tasks
+                                         │
+                                   🚦 Human Gate
+                                         │
+Finish  ← Verify  ← Implement ← Review ← Analyze
+    │                                     │
+🚦 Human Gate                       🚦 Human Gate
 ```
 
-### Phase breakdown
-
-| Phase | Activity | Output |
-|-------|----------|--------|
-| 1. Specify | Constitution + feature specification | `constitution.md`, `spec.md` |
-| 2. Clarify | Ambiguity resolution | Refined specification |
-| 3. Plan | Architecture + implementation planning | `plan.md`, ADRs |
-| 4. Checklist | Quality gate generation | Security, a11y, performance checklists |
-| 5. Tasks | Task decomposition | `tasks.md` (P0–P3, dependency-ordered) |
-| | **🚦 Human Gate** | *Approve task breakdown before implementation* |
-| 6. Analyze | Cross-artifact validation | Consistency report |
-| | **🚦 Human Gate** | *Confirm all artifacts are aligned* |
-| 7. Review | Cross-model plan review | Review findings |
-| 8. Implement | Code + review + test loop | Working implementation |
-| 9. Verify | Full test suite + acceptance criteria | Verification report |
-| 10. Finish | Branch prep + merge readiness | Ready for merge |
-| | **🚦 Human Gate** | *Final approval before merge* |
-
-### Iterative implementation (Phase 8)
-
-Implementation follows a tight feedback loop rather than a single-pass approach:
-
-```
-  ┌─────────────────────────────────────────────┐
-  │                                             │
-  ▼                                             │
-Development                 Passes?             │
-writes code + tests ──▶ QA review + test ──▶ ✅ DONE
-                             │
-                             │ ❌ Issues found
-                             ▼
-                      Feedback via /acli.respond
-                             │
-                             └──── back to Development
-                              (max 5 iterations, then escalates)
-```
-
-1. **Task selection** — orchestrator picks the next task by priority (P0 first) and dependency order
-2. **Implementation** — `@development` writes code and tests per the plan, creates handover document
-3. **Review** — `@qa` validates against spec acceptance criteria, checks architecture conformance
-4. **Test** — `@qa` executes the test suite and reports results
-5. **Decision** — if review passes and tests are green, task completes. Otherwise, feedback loops back to `@development`
-
-After 5 failed iterations, the orchestrator escalates to the developer for manual intervention. Up to 3 independent tasks (non-overlapping files) execute in parallel.
+Run `/acli.run <feature>` and the orchestrator drives the whole thing. You only touch it at the three approval gates.
 
 ---
 
-## Brownfield Adoption
+## 5 Agents, 1 Team
 
-For existing codebases, `/acli.onboard` performs a 4-phase analysis:
-
-1. **Scan** — auto-discovers tech stack, architecture patterns, and project conventions
-2. **Bootstrap** — generates tailored constitution, reference architecture, and quality standards
-3. **Validate** — cross-references generated documents against actual code
-4. **Summary** — produces adoption report with recommended next steps
+| Agent | Job |
+|-------|-----|
+| `orchestrator` | Routes work, enforces gates, runs tasks in parallel |
+| `architect` | Writes specs, plans, ADRs — tech-agnostic and rigorous |
+| `security` | OWASP checklists, threat modeling, vulnerability review |
+| `development` | TDD implementation, plan-conformant, hands off cleanly |
+| `qa` | Code review, test coverage, acceptance validation |
 
 ---
 
-## Workspace Structure
+## Slash Commands
 
-Agent Framework creates a governed workspace alongside your source code:
+**Everyday:**
+
+| Command | What it does |
+|---------|-------------|
+| `/acli.run <feature>` | Full lifecycle start to finish |
+| `/acli.onboard` | Analyse and bootstrap an existing codebase |
+| `/acli.implement` | Jump straight to implementation |
+
+**Spec & Planning:**
+
+| Command | What it does |
+|---------|-------------|
+| `/acli.constitution` | Define your project principles & architecture boundaries |
+| `/acli.specify` | Author a structured feature spec with acceptance criteria |
+| `/acli.plan` | Generate implementation plan + architecture decision records |
+| `/acli.tasks` | Break the plan into prioritised, dependency-ordered tasks |
+| `/acli.checklist` | Generate security, a11y, and performance quality gates |
+
+**Review & Ship:**
+
+| Command | What it does |
+|---------|-------------|
+| `/acli.critique` | Spec-aligned code review with severity ratings |
+| `/acli.debug` | Structured root-cause analysis |
+| `/acli.finish` | Branch cleanup and merge readiness check |
+
+---
+
+## Brownfield? No problem.
+
+`/acli.onboard` auto-scans your existing codebase, generates a tailored constitution + reference architecture, and gets you into the lifecycle without starting from scratch.
+
+---
+
+## Workspace Layout
 
 ```
 .github/
-  agents/          -- agent definitions (.agent.md)
-  skills/          -- reusable skills (.skill.md)
-  prompts/         -- workflow commands (.prompt.md)
+  agents/    ← agent definitions
+  skills/    ← reusable skills
+  prompts/   ← slash commands
 .specify/
-  memory/          -- constitution, reference architecture, quality standards
-  specs/           -- feature specifications, plans, checklists, task lists
-.beads/            -- persistent task state and decision history
+  memory/    ← constitution, architecture, quality standards
+  specs/     ← specs, plans, checklists, tasks
+.beads/      ← persistent memory (if beads-based memory selected)
 ```
 
 ---
@@ -204,28 +139,24 @@ Agent Framework creates a governed workspace alongside your source code:
 
 | Command | Description |
 |---------|-------------|
-| `acli setup [--check]` | Verify and install all dependencies (spec-kit, beads, plugins) |
-| `acli init [--force]` | Initialize the framework in a project directory |
+| `acli setup [--check]` | Install dependencies + scaffold project (interactive) |
 | `acli install <agent>` | Install a specific agent |
 | `acli remove <agent>` | Remove an installed agent |
 | `acli list agents\|skills` | List available agents or skills |
-| `acli update [agent]` | Update agents, prompts, and skills to latest version |
+| `acli update [agent]` | Update agents, prompts, and skills |
 | `acli config` | View or modify framework configuration |
 
 ---
 
 ## Requirements
 
-| Dependency | Version | Purpose |
-|------------|---------|---------|
-| Node.js | >= 18.0.0 | Runtime |
-| VS Code | Latest | IDE with GitHub Copilot Chat |
-| Python | >= 3.8 | spec-kit specification engine |
+- Node.js >= 18
+- VS Code + GitHub Copilot Chat
+- Python >= 3.8 (for spec-kit)
+
+---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.
 
-## License
-
-MIT
