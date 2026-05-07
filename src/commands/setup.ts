@@ -265,26 +265,20 @@ export async function setupBeads(projectRoot: string, spinner?: ReturnType<typeo
 }
 
 /**
- * Project-level initialisation: init spec-kit project, install plugins, init beads.
- * Does NOT install dependencies — use `acli setup` for that.
+ * Project-level initialisation: init spec-kit project and init beads.
+ * Does NOT install dependencies or extensions — use `acli setup` for that.
  */
 export async function initProject(projectRoot: string): Promise<{
   specKit: boolean;
   beads: boolean;
-  plugins: string[];
 }> {
-  console.log(chalk.cyan('\nInitializing project tools...\n'));
-
   // 1. Initialize spec-kit for the project
   const specKit = await setupSpecKit(projectRoot);
 
-  // 2. Install spec-kit plugins (brownfield, fleet, superpowers-bridge)
-  const plugins = await installSpecKitPlugins();
-
-  // 3. Initialize and enable beads
+  // 2. Initialize and enable beads
   const beads = await setupBeads(projectRoot);
 
-  return { specKit, beads, plugins };
+  return { specKit, beads };
 }
 
 // ─── CLI Command: `acli setup` ──────────────────────────────────────────────
@@ -429,9 +423,8 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   console.log(`  beads init:            ${wantBeads ? (beadsInitOk ? chalk.green('initialized') : chalk.yellow(beadsOk ? 'failed' : 'n/a')) : chalk.gray('skipped')}`);
   console.log('');
 
-  const allOk = specKitOk && (!wantBeads || beadsOk);
-  if (allOk) {
-    console.log(chalk.green('All selected dependencies installed and initialized. Run ') + chalk.cyan('acli init') + chalk.green(' to scaffold your project.\n'));
+  if (specKitOk && beadsOk || specKitOk && !wantBeads) {
+    console.log(chalk.green('All selected dependencies installed and initialized.\n'));
   } else {
     console.log(chalk.yellow('Some dependencies could not be installed automatically.'));
     if (!specKitOk) {
@@ -442,4 +435,9 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
     }
     console.log('');
   }
+
+  // Auto-run acli init
+  console.log(chalk.cyan.bold('\nScaffolding project...\n'));
+  const { initCommand } = await import('./init');
+  await initCommand({ dir: options.dir, force: false });
 }

@@ -5,7 +5,7 @@ import ora from 'ora';
 import { AgentManager } from '../core/AgentManager';
 import { getPrebuiltAgents } from '../agents';
 import { installPrompts } from './install';
-import { initProject } from './setup';
+import { setupSpecKit, setupBeads } from './setup';
 
 interface InitOptions {
   dir: string;
@@ -138,13 +138,14 @@ acli create skill
     }
     agentsSpinner.succeed(`Installed ${installedAgents.length} built-in agents.`);
 
-    // Set up spec-kit and beads for the project (no dependency installation)
-    const setupResult = await initProject(projectRoot);
+    // Init spec-kit and beads for the project (tools already installed by acli setup)
+    const specKitOk = await setupSpecKit(projectRoot);
+    const beadsOk   = await setupBeads(projectRoot);
 
     // Update config with actual dependency status
-    config.dependencies['spec-kit'].version = setupResult.specKit ? 'cli' : 'unavailable';
-    config.dependencies.beads.enabled = setupResult.beads;
-    config.dependencies.beads.requireCli = setupResult.beads;
+    config.dependencies['spec-kit'].version = specKitOk ? 'cli' : 'unavailable';
+    config.dependencies.beads.enabled = beadsOk;
+    config.dependencies.beads.requireCli = beadsOk;
     await fs.writeJson(configPath, config, { spaces: 2 });
 
     // Install additional default agents if specified
@@ -169,12 +170,6 @@ acli create skill
     console.log('');
     console.log(chalk.green.bold('Agent Framework v2 initialized successfully.'));
     console.log('');
-
-    if (!setupResult.specKit || !setupResult.beads) {
-      console.log(chalk.yellow('Some dependencies are missing. Run:'));
-      console.log(chalk.cyan('  acli setup') + chalk.gray('             - Install spec-kit, beads, and plugins'));
-      console.log('');
-    }
 
     console.log(chalk.white('Next steps:'));
     console.log(chalk.cyan('  /acli.onboard') + chalk.gray('      - Onboard an existing project (brownfield)'));
