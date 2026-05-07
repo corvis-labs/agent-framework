@@ -1,6 +1,6 @@
 {
   "name": "agent-framework-cli",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Turn GitHub Copilot into a coordinated engineering team — specification-driven development lifecycle with quality gates, persistent memory, and human-in-the-loop governance",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",

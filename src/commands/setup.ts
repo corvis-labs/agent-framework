@@ -4,11 +4,20 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { execSync } from 'child_process';
 
-/** spec-kit plugins to install */
+/** spec-kit extensions to install via `specify extension add <name> --from <zip>` */
 const SPECKIT_PLUGINS = [
-  { name: 'spec-kit-brownfield', repo: 'https://github.com/Quratulain-bilal/spec-kit-brownfield' },
-  { name: 'spec-kit-fleet', repo: 'https://github.com/sharathsatish/spec-kit-fleet' },
-  { name: 'superpowers-bridge', repo: 'https://github.com/RbBtSn0w/spec-kit-extensions', path: 'superpowers-bridge' },
+  {
+    name: 'brownfield',
+    zipUrl: 'https://github.com/Quratulain-bilal/spec-kit-brownfield/archive/refs/heads/main.zip',
+  },
+  {
+    name: 'fleet',
+    zipUrl: 'https://github.com/sharathsatish/spec-kit-fleet/archive/refs/heads/main.zip',
+  },
+  {
+    name: 'superpowers-bridge',
+    zipUrl: 'https://github.com/WangX0111/superspec/archive/refs/heads/main.zip',
+  },
 ];
 
 const isWindows = process.platform === 'win32';
@@ -141,54 +150,37 @@ export async function ensureBeads(spinner?: ReturnType<typeof ora>): Promise<boo
 }
 
 /**
- * Install spec-kit plugins: brownfield, fleet, superpowers-bridge.
- * Strategy per plugin:
- *   1. `specify plugin install <name>` (PyPI package name)
- *   2. `pip install "git+<repo>[#subdirectory=<path>]"` (git fallback)
+ * Install spec-kit extensions: brownfield, fleet, superpowers-bridge.
+ * Uses `specify extension add <name> --from <zip-url>` (community catalog
+ * extensions are not directly installable, so we supply the GitHub archive).
  */
 export async function installSpecKitPlugins(spinner?: ReturnType<typeof ora>): Promise<string[]> {
-  const s = spinner || ora('Installing spec-kit plugins...').start();
+  const s = spinner || ora('Installing spec-kit extensions...').start();
   const installed: string[] = [];
 
   if (!commandExists('specify')) {
-    s.warn('spec-kit CLI not available. Skipping plugin installation.');
+    s.warn('spec-kit CLI not available. Skipping extension installation.');
     return installed;
   }
 
-  const pipCmd = commandExists('pip3') ? 'pip3' : 'pip';
-
   for (const plugin of SPECKIT_PLUGINS) {
-    s.text = `Installing spec-kit plugin: ${plugin.name}...`;
-    let success = false;
-
-    // Attempt 1: specify plugin install <package-name>
+    s.text = `Installing spec-kit extension: ${plugin.name}...`;
     try {
-      execSync(`specify plugin install ${plugin.name}`, { stdio: 'ignore', timeout: 60000 });
-      success = true;
-    } catch { /* fall through */ }
-
-    // Attempt 2: pip install git+<url>[#subdirectory=<path>]
-    if (!success) {
-      try {
-        const gitUrl = plugin.path
-          ? `git+${plugin.repo}.git#subdirectory=${plugin.path}`
-          : `git+${plugin.repo}.git`;
-        execSync(`${pipCmd} install "${gitUrl}"`, { stdio: 'ignore', timeout: 90000 });
-        success = true;
-      } catch { /* fall through */ }
-    }
-
-    if (success) {
+      execSync(`specify extension add ${plugin.name} --from "${plugin.zipUrl}"`, {
+        stdio: 'pipe',
+        input: 'y\n',
+        timeout: 90000,
+      });
       installed.push(plugin.name);
-    } else {
-      console.log(chalk.yellow(`  Warning: failed to install plugin ${plugin.name}`));
+    } catch {
+      console.log(chalk.yellow(`  Warning: failed to install extension ${plugin.name}`));
     }
   }
 
   if (installed.length > 0) {
-    s.succeed(`Installed ${installed.length} spec-kit plugin(s): ${installed.join(', ')}`);
+    s.succeed(`Installed ${installed.length} spec-kit extension(s): ${installed.join(', ')}`);
   } else {
-    s.warn('No spec-kit plugins installed. Install manually if needed.');
+    s.warn('No spec-kit extensions installed. Install manually: specify extension add <name> --from <zip-url>');
   }
 
   return installed;
@@ -215,8 +207,14 @@ export async function setupSpecKit(projectRoot: string, spinner?: ReturnType<typ
   }
 
   try {
-    execSync('specify init . --ai copilot', { cwd: projectRoot, stdio: 'pipe' });
-    s.succeed('spec-kit initialized (specify init . --ai copilot).');
+    // Pass 'y\n' to stdin to answer the non-empty directory confirmation prompt.
+    // Use --integration (--ai is deprecated since v0.10.0).
+    execSync('specify init . --integration copilot', {
+      cwd: projectRoot,
+      stdio: 'pipe',
+      input: 'y\n',
+    });
+    s.succeed('spec-kit initialized.');
     return true;
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer; stdout?: Buffer };
@@ -226,7 +224,7 @@ export async function setupSpecKit(projectRoot: string, spinner?: ReturnType<typ
       s.succeed('spec-kit already initialized for this project.');
       return true;
     }
-    s.warn('spec-kit init failed. Run "specify init . --ai copilot" manually.');
+    s.warn('spec-kit init failed. Run "specify init . --integration copilot" manually.');
     return false;
   }
 }
