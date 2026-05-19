@@ -359,6 +359,16 @@ async function writeAgencyAgent(
         fileContent = content;
         break;
 
+      case 'opencode':
+        // OpenCode reads agents from .opencode/agents/
+        // Wrap in OpenCode frontmatter (description + mode)
+        dest = path.join(projectRoot, '.opencode', 'agents', `${slug}.md`);
+        fileContent = matter.stringify(parsed.content, {
+          description,
+          mode: 'subagent',
+        });
+        break;
+
       default:
         continue;
     }

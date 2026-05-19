@@ -7,6 +7,7 @@
  *   claude       → AGENTS.md  (aggregated, one section per agent)
  *   windsurf     → .windsurf/rules/{name}.md
  *   open-plugins → .agents/plugins/agent-framework/agents/{name}.agent.md
+ *   opencode     → .opencode/agents/{name}.md
  *
  * The Open Plugins spec (open-plugins.com) defines the canonical layout used by
  * Cursor Directory and other conformant tools.
@@ -52,6 +53,8 @@ export function platformDestPath(
         'agents',
         `${name}.agent.md`,
       );
+    case 'opencode':
+      return path.join(projectRoot, '.opencode', 'agents', `${name}.md`);
     default:
       return path.join(projectRoot, '.github', 'agents', `${name}.agent.md`);
   }
@@ -130,6 +133,7 @@ export function skillDestPath(
     case 'copilot':
     case 'cursor':
     case 'open-plugins':
+    case 'opencode':
     default:
       // .agents/skills/ is the shared path recognised by Copilot, Cursor, Codex, Amp,
       // OpenCode, Gemini CLI, Replit, Cline, and more (vercel-labs/skills §Supported Agents)
@@ -213,6 +217,13 @@ export async function ensurePlatformDirs(
           path.join(projectRoot, '.agents', 'plugins', OPEN_PLUGINS_PLUGIN_NAME, 'agents'),
           path.join(projectRoot, '.agents', 'plugins', OPEN_PLUGINS_PLUGIN_NAME, 'skills'),
           path.join(projectRoot, '.agents', 'plugins', OPEN_PLUGINS_PLUGIN_NAME, '.plugin'),
+        );
+        break;
+      case 'opencode':
+        dirsToCreate.push(
+          path.join(projectRoot, '.opencode', 'agents'),
+          // OpenCode also reads .agents/skills for shared skills
+          path.join(projectRoot, '.agents', 'skills'),
         );
         break;
     }

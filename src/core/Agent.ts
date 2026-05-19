@@ -25,8 +25,9 @@ export interface AgentMetadata {
  * - claude:       Claude Code (AGENTS.md)
  * - windsurf:     Windsurf (.windsurf/rules/*.md)
  * - open-plugins: Open Plugins canonical structure (.agents/plugins/<name>/)
+ * - opencode:     OpenCode (.opencode/agents/*.md)
  */
-export type TargetPlatform = 'copilot' | 'cursor' | 'claude' | 'windsurf' | 'open-plugins';
+export type TargetPlatform = 'copilot' | 'cursor' | 'claude' | 'windsurf' | 'open-plugins' | 'opencode';
 
 export interface AgentConfig {
   // Legacy platform selector — kept for backward compatibility.
@@ -55,6 +56,14 @@ export interface AgentConfig {
    * and collapses blank lines — typically saves 15–25% of tokens.
    */
   compact?: boolean;
+
+  /**
+   * OpenCode agent mode. Defaults to 'subagent'.
+   * - primary:  invoked directly by the user
+   * - subagent: orchestrated by another agent
+   * - all:      accessible in both contexts
+   */
+  openCodeMode?: 'primary' | 'subagent' | 'all';
 }
 
 export abstract class Agent {
@@ -154,9 +163,50 @@ export abstract class Agent {
         return this.generateWindsurfRule();
       case 'open-plugins':
         return this.generateAgentFile(); // Open Plugins uses the canonical .agent.md format
+      case 'opencode':
+        return this.generateOpenCodeAgent();
       default:
         return this.generateAgentFile();
     }
+  }
+
+  /**
+   * Generate an OpenCode agent file (.opencode/agents/*.md).
+   * Produces YAML frontmatter with description, mode, model (if set), and
+   * a permission block derived from the agent's declared tools.
+   */
+  protected generateOpenCodeAgent(): string {
+    const WRITE_TOOLS = new Set([
+      'create_file',
+      'replace_string_in_file',
+      'multi_replace_string_in_file',
+      'edit_notebook_file',
+    ]);
+    const BASH_TOOLS = new Set(['run_in_terminal', 'execution_subagent']);
+
+    const tools = this.config.tools ?? [];
+    const canEdit = tools.some((t) => WRITE_TOOLS.has(t));
+    const canBash = tools.some((t) => BASH_TOOLS.has(t));
+
+    const fm: Record<string, unknown> = {
+      description: this.metadata.description,
+      mode: this.config.openCodeMode ?? 'subagent',
+    };
+
+    if (this.config.model) {
+      fm.model = this.config.model;
+    }
+
+    fm.permission = {
+      edit: canEdit ? 'allow' : 'deny',
+      bash: canBash ? 'allow' : 'deny',
+      read: 'allow',
+      glob: 'allow',
+      grep: 'allow',
+      list: 'allow',
+    };
+
+    return matter.stringify(`\n# ${this.metadata.displayName}\n\n${this.getInstructions()}`, fm);
   }
 
   /**

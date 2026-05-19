@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-05-19
+
+### Added
+- **OpenCode platform support** — new `'opencode'` target in `TargetPlatform`. Agents are emitted to `.opencode/agents/{name}.md` with YAML frontmatter (`description`, `mode`, optional `model`, and a `permission` block auto-derived from the agent's `tools` array). Write tools map to `edit: allow`; `run_in_terminal` maps to `bash: allow`; all others default to `deny`.
+- **`AgentConfig.openCodeMode?: 'primary' | 'subagent' | 'all'`** — controls the OpenCode `mode` frontmatter field (defaults to `'subagent'`).
+- **`Agent.generateOpenCodeAgent()`** — protected method for OpenCode output generation.
+- **`acli init` platform list** now includes OpenCode with path hint `.opencode/agents/`.
+- **`agency` command** handles `'opencode'` platform — writes `.opencode/agents/{slug}.md` with `description` + `mode: subagent` frontmatter.
+- **`PlatformEmitter`** — `platformDestPath`, `skillDestPath`, and `ensurePlatformDirs` all handle `'opencode'`. Skills resolve to the shared `.agents/skills/` path (same as copilot/cursor/OpenCode's vercel-labs/skills convention).
+
 ## [3.4.0] - 2026-05-19
 
 ### Added

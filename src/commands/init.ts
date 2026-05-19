@@ -22,8 +22,7 @@ const ALL_PLATFORMS: { value: TargetPlatform; name: string }[] = [
   { value: 'cursor',       name: 'Cursor AI                 (.cursor/rules/)' },
   { value: 'claude',       name: 'Claude Code               (AGENTS.md)' },
   { value: 'windsurf',     name: 'Windsurf                  (.windsurf/rules/)' },
-  { value: 'open-plugins', name: 'Open Plugins standard     (.agents/plugins/)' },
-];
+  { value: 'open-plugins', name: 'Open Plugins standard     (.agents/plugins/)' },  { value: 'opencode',     name: 'OpenCode                  (.opencode/agents/)' },];
 
 export async function initCommand(options: InitOptions): Promise<void> {
   const spinner = ora('Initializing agent framework...').start();
