@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { getPrebuiltAgents } from '../agents';
 import { AgentManager } from '../core/AgentManager';
+import { TargetPlatform } from '../core/Agent';
 import { installPrompts } from './install';
 
 export async function updateCommand(name?: string): Promise<void> {
@@ -16,7 +17,8 @@ export async function updateCommand(name?: string): Promise<void> {
   }
 
   const config = await fs.readJson(configPath);
-  const agentManager = new AgentManager(projectRoot, config.agentsDir);
+  const platforms: TargetPlatform[] = config.platforms ?? ['copilot', 'open-plugins'];
+  const agentManager = new AgentManager(projectRoot, config.agentsDir, platforms, config.version ?? '2.0.0');
   const prebuiltAgents = getPrebuiltAgents();
 
   if (name) {

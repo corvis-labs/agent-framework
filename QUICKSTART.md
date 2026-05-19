@@ -13,15 +13,149 @@ cd /path/to/your/project
 acli init
 ```
 
-This sets up everything automatically:
-- `.github/agents/` -- 5 pre-built agent definitions
-- `.github/skills/` -- framework skills
-- `.github/prompts/` -- 16 slash command prompts
-- `.specify/` -- spec-kit working directory
-- `.beads/` -- beads task tracking
-- `.agent-framework.json` -- configuration file
+`acli init` prompts you to choose which AI editor platforms to target, then sets up all required directories:
 
-`acli init` automatically installs spec-kit, beads, and required plugins (brownfield, fleet, superpowers-bridge) if they are not already present. No manual setup required.
+```
+Which AI editor platforms would you like to target? (checkbox)
+
+  ◉ GitHub Copilot / VS Code  (.github/agents/)
+  ◉ Open Plugins standard     (.agents/plugins/)
+  ○ Cursor AI                 (.cursor/rules/)
+  ○ Claude Code               (AGENTS.md)
+  ○ Windsurf                  (.windsurf/rules/)
+```
+
+You can also pass platforms non-interactively:
+
+```bash
+acli init --platforms copilot cursor open-plugins
+```
+
+### What gets created
+
+Depending on selected platforms:
+
+```
+.github/agents/       ← GitHub Copilot agent files
+.github/skills/       ← reusable skills
+.github/prompts/      ← 16 slash command prompt files
+.cursor/rules/        ← Cursor .mdc rule files      (if cursor selected)
+.windsurf/rules/      ← Windsurf .md rule files     (if windsurf selected)
+AGENTS.md             ← Claude Code registry        (if claude selected)
+.agents/plugins/      ← Open Plugins packages       (if open-plugins selected)
+.specify/             ← spec-kit working directory
+.agent-framework.json ← framework config (stores your platform choices)
+```
+
+## Install Dependencies
+
+Run this once after `acli init` to install spec-kit, beads, and platform extensions:
+
+```bash
+acli setup
+```
+
+## Install Additional Agents
+
+All 5 agents are installed automatically during `acli init`. To reinstall or add to a new platform:
+
+```bash
+acli install orchestrator
+acli install architect
+```
+
+Each `acli install` emits agent files to all platforms listed in `.agent-framework.json`.
+
+## Use in Your AI Editor
+
+### GitHub Copilot
+
+Open Copilot Chat and use slash commands:
+
+```
+/acli.run Build a REST API for user management
+```
+
+### Cursor
+
+Agents are loaded automatically as rules. Reference them in chat:
+
+```
+@architect help me design the data layer for this feature
+```
+
+### Claude Code
+
+`AGENTS.md` is loaded automatically. Claude sees all agents and their instructions on every session.
+
+### Windsurf
+
+Agents are active via `.windsurf/rules/` — no extra configuration needed.
+
+---
+
+## Full Lifecycle (any platform)
+
+| Step | Command |
+|---|---|
+| Set up project constitution | `/acli.constitution` |
+| Author a feature spec | `/acli.specify <feature>` |
+| Resolve ambiguities | `/acli.clarify` |
+| Generate implementation plan | `/acli.plan` |
+| Create quality checklists | `/acli.checklist` |
+| Break into tasks | `/acli.tasks` |
+| Validate consistency | `/acli.analyze` |
+| Implement with review loop | `/acli.implement` |
+
+Or run the complete workflow in one command:
+
+```
+/acli.run Build a user authentication system with OAuth support
+```
+
+---
+
+## Utility Commands
+
+```
+/acli.debug <description>   ← structured debugging
+/acli.critique              ← code review
+/acli.respond               ← address review feedback
+/acli.finish                ← prepare branch for merge
+/acli.onboard               ← bootstrap an existing codebase
+```
+
+---
+
+## Extension Ecosystem
+
+```bash
+# See what is available
+acli extensions list --available
+
+# Install a known extension
+acli extensions add brownfield
+
+# Scaffold your own plugin
+acli extensions create my-plugin
+# Edit .agents/plugins/my-plugin/agents/my-plugin.agent.md
+acli extensions pack my-plugin   # → my-plugin-v1.0.0.zip
+```
+
+---
+
+## Agent Interaction
+
+Agents are available as `@agent` mentions (Copilot, Cursor) or loaded automatically (Claude Code, Windsurf):
+
+| Agent | Invocation |
+|---|---|
+| `@orchestrator` | Full lifecycle coordination |
+| `@architect` | Specs, plans, ADRs |
+| `@security` | OWASP, threat modeling |
+| `@development` | TDD implementation |
+| `@qa` | Code review, test coverage |
+
 
 ## Install Additional Agents
 

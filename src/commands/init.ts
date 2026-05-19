@@ -2,7 +2,10 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import chalk from 'chalk';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import { AgentManager } from '../core/AgentManager';
+import { TargetPlatform } from '../core/Agent';
+import { ensurePlatformDirs } from '../core/PlatformEmitter';
 import { getPrebuiltAgents } from '../agents';
 import { installPrompts } from './install';
 import { setupSpecKit, setupBeads } from './setup';
@@ -11,7 +14,16 @@ interface InitOptions {
   dir: string;
   agents?: string[];
   force?: boolean;
+  platforms?: string[];
 }
+
+const ALL_PLATFORMS: { value: TargetPlatform; name: string }[] = [
+  { value: 'copilot',      name: 'GitHub Copilot / VS Code  (.github/agents/)' },
+  { value: 'cursor',       name: 'Cursor AI                 (.cursor/rules/)' },
+  { value: 'claude',       name: 'Claude Code               (AGENTS.md)' },
+  { value: 'windsurf',     name: 'Windsurf                  (.windsurf/rules/)' },
+  { value: 'open-plugins', name: 'Open Plugins standard     (.agents/plugins/)' },
+];
 
 export async function initCommand(options: InitOptions): Promise<void> {
   const spinner = ora('Initializing agent framework...').start();
@@ -19,17 +31,29 @@ export async function initCommand(options: InitOptions): Promise<void> {
   try {
     const projectRoot = path.resolve(options.dir);
 
-    // Create .github directory structure
-    const githubDir = path.join(projectRoot, '.github');
-    await fs.ensureDir(githubDir);
+    // --- Platform selection ---
+    let selectedPlatforms: TargetPlatform[];
+    if (options.platforms && options.platforms.length > 0) {
+      selectedPlatforms = options.platforms as TargetPlatform[];
+    } else {
+      spinner.stop();
+      const { platforms } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'platforms',
+          message: 'Which AI editor platforms would you like to target?',
+          choices: ALL_PLATFORMS,
+          default: ['copilot', 'open-plugins'],
+        },
+      ]);
+      selectedPlatforms = platforms.length > 0 ? platforms : ['copilot', 'open-plugins'];
+      spinner.start('Initializing agent framework...');
+    }
 
-    const agentsDir = path.join(githubDir, 'agents');
-    await fs.ensureDir(agentsDir);
+    // --- Ensure platform-specific directories ---
+    await ensurePlatformDirs(selectedPlatforms, projectRoot);
 
-    const skillsDir = path.join(githubDir, 'skills');
-    await fs.ensureDir(skillsDir);
-
-    // Create .vscode directory for VS Code settings
+    // Always create .vscode dir for VS Code settings
     const vscodeDir = path.join(projectRoot, '.vscode');
     await fs.ensureDir(vscodeDir);
 
@@ -42,22 +66,23 @@ export async function initCommand(options: InitOptions): Promise<void> {
       }
     }
     const config = {
-        version: '2.0.0',
-        agentsDir: '.github/agents',
-        skillsDir: '.github/skills',
-        promptsDir: '.github/prompts',
-        dependencies: {
-          'spec-kit': { enabled: true, version: 'bundled' },
-          superpowers: { enabled: true, version: 'bundled' },
-          beads: { enabled: true, requireCli: false }
-        },
-        enterprise: {
-          tone: 'formal',
-          emojis: false
-        },
-        defaultAgents: options.agents || [],
-        customSettings: {}
-      };
+      version: '2.0.0',
+      platforms: selectedPlatforms,
+      agentsDir: '.github/agents',
+      skillsDir: '.github/skills',
+      promptsDir: '.github/prompts',
+      dependencies: {
+        'spec-kit': { enabled: true, version: 'bundled' },
+        superpowers: { enabled: true, version: 'bundled' },
+        beads: { enabled: true, requireCli: false }
+      },
+      enterprise: {
+        tone: 'formal',
+        emojis: false
+      },
+      defaultAgents: options.agents || [],
+      customSettings: {}
+    };
     await fs.writeJson(configPath, config, { spaces: 2 });
 
     // Create VS Code extensions.json
@@ -72,11 +97,14 @@ export async function initCommand(options: InitOptions): Promise<void> {
       await fs.writeJson(extensionsPath, extensions, { spaces: 2 });
     }
 
-    // Create README in agents directory
-    const agentsReadme = path.join(agentsDir, 'README.md');
-    await fs.writeFile(agentsReadme, `# GitHub Copilot Agents
+    // Create README in agents directory (Copilot)
+    const agentsDir = path.join(projectRoot, config.agentsDir);
+    if (await fs.pathExists(agentsDir)) {
+      const agentsReadme = path.join(agentsDir, 'README.md');
+      await fs.writeFile(agentsReadme, `# AI Agents
 
-This directory contains AI agents for GitHub Copilot.
+This directory contains agent definitions installed by agent-framework.
+Agents are automatically emitted to all configured platforms: ${selectedPlatforms.join(', ')}.
 
 ## Installation
 
@@ -86,27 +114,30 @@ acli install orchestrator
 \`\`\`
 
 Or install individually:
-- \`acli install architect\` - Requirements, specifications, and architecture
-- \`acli install security\` - Security analysis
-- \`acli install development\` - Code implementation
-- \`acli install qa\` - Testing and code quality
-- \`acli install orchestrator\` - Multi-agent coordination
+- \`acli install architect\`    — Requirements, specifications, and architecture
+- \`acli install security\`     — Security analysis
+- \`acli install development\`  — Code implementation
+- \`acli install qa\`           — Testing and code quality
+- \`acli install orchestrator\` — Multi-agent coordination
 
 ## Usage
 
-In VS Code Copilot Chat, use \`@agentname\` to invoke agents.
-
-Example:
-\`\`\`
-@architect gather requirements for user authentication
-\`\`\`
+| Platform       | Invocation                         |
+|----------------|------------------------------------|
+| GitHub Copilot | \`@architect\` in Copilot Chat      |
+| Cursor         | \`@architect\` in Cursor chat       |
+| Claude Code    | Loaded automatically from AGENTS.md|
+| Windsurf       | Active via .windsurf/rules/        |
 `, 'utf-8');
+    }
 
     // Create README in skills directory
-    const skillsReadme = path.join(skillsDir, 'README.md');
-    await fs.writeFile(skillsReadme, `# GitHub Copilot Skills
+    const skillsDir = path.join(projectRoot, config.skillsDir);
+    if (await fs.pathExists(skillsDir)) {
+      const skillsReadme = path.join(skillsDir, 'README.md');
+      await fs.writeFile(skillsReadme, `# Agent Skills
 
-This directory contains reusable skills for GitHub Copilot agents.
+This directory contains reusable skills for AI agents.
 
 ## Create Custom Skills
 
@@ -114,6 +145,7 @@ This directory contains reusable skills for GitHub Copilot agents.
 acli create skill
 \`\`\`
 `, 'utf-8');
+    }
 
     spinner.succeed('Directory structure created.');
 
@@ -124,7 +156,7 @@ acli create skill
 
     // Install all built-in agents
     const agentsSpinner = ora('Installing built-in agents...').start();
-    const agentManager = new AgentManager(projectRoot, config.agentsDir);
+    const agentManager = new AgentManager(projectRoot, config.agentsDir, selectedPlatforms, config.version);
     const prebuiltAgents = getPrebuiltAgents();
     const installedAgents: string[] = [];
 
@@ -139,7 +171,7 @@ acli create skill
     agentsSpinner.succeed(`Installed ${installedAgents.length} built-in agents.`);
 
     // Init spec-kit and beads for the project (tools already installed by acli setup)
-    const specKitOk = await setupSpecKit(projectRoot);
+    const specKitOk = await setupSpecKit(projectRoot, selectedPlatforms);
     const beadsOk   = await setupBeads(projectRoot);
 
     // Update config with actual dependency status
@@ -168,20 +200,27 @@ acli create skill
 
     // Success message
     console.log('');
-    console.log(chalk.green.bold('Agent Framework v2 initialized successfully.'));
+    console.log(chalk.green.bold('Agent Framework initialized successfully.'));
     console.log('');
 
+    console.log(chalk.white('Platforms configured:'));
+    const platformPaths: Record<string, string> = {
+      copilot: '.github/agents/',
+      cursor: '.cursor/rules/',
+      claude: 'AGENTS.md',
+      windsurf: '.windsurf/rules/',
+      'open-plugins': '.agents/plugins/agent-framework/',
+    };
+    for (const p of selectedPlatforms) {
+      console.log(chalk.gray(`  ${p.padEnd(14)} → ${platformPaths[p] ?? p}`));
+    }
+
+    console.log('');
     console.log(chalk.white('Next steps:'));
     console.log(chalk.cyan('  /acli.onboard') + chalk.gray('      - Onboard an existing project (brownfield)'));
     console.log(chalk.cyan('  /acli.constitution') + chalk.gray(' - Create your project constitution'));
     console.log(chalk.cyan('  /acli.run') + chalk.gray('          - Run the full fleet orchestrator'));
     console.log(chalk.cyan('  /acli.specify') + chalk.gray('      - Define what you want to build'));
-    console.log('');
-    console.log(chalk.white('Installed to:'));
-    console.log(chalk.gray('  Agents:  .github/agents/'));
-    console.log(chalk.gray('  Prompts: .github/prompts/'));
-    console.log(chalk.gray('  Skills:  .github/skills/'));
-    console.log(chalk.gray('  Specs:   .specify/'));
     console.log('');
     console.log(chalk.white('Documentation: ') + chalk.gray('https://github.com/ipranjal/agent-framework'));
 

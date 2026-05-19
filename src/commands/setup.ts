@@ -4,6 +4,27 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
+import { TargetPlatform } from '../core/Agent';
+
+/**
+ * Maps a TargetPlatform to the corresponding `specify --integration` value.
+ * spec-kit v0.10+ accepts: copilot, cursor, claude, windsurf.
+ * Falls back to 'copilot' for open-plugins (not a specify integration).
+ */
+const SPECIFY_INTEGRATION: Partial<Record<TargetPlatform, string>> = {
+  copilot: 'copilot',
+  cursor: 'cursor',
+  claude: 'claude',
+  windsurf: 'windsurf',
+};
+
+function pickSpecifyIntegration(platforms: TargetPlatform[]): string {
+  for (const p of platforms) {
+    const integration = SPECIFY_INTEGRATION[p];
+    if (integration) return integration;
+  }
+  return 'copilot';
+}
 
 /** spec-kit extensions to install via `specify extension add <name> --from <zip>` */
 const SPECKIT_PLUGINS = [
@@ -199,7 +220,11 @@ export async function installSpecKitPlugins(
 /**
  * Initialize spec-kit for the project: `specify init . --ai copilot`
  */
-export async function setupSpecKit(projectRoot: string, spinner?: ReturnType<typeof ora>): Promise<boolean> {
+export async function setupSpecKit(
+  projectRoot: string,
+  platforms: TargetPlatform[] = ['copilot'],
+  spinner?: ReturnType<typeof ora>,
+): Promise<boolean> {
   const s = spinner || ora('Initializing spec-kit...').start();
 
   if (!commandExists('specify')) {
@@ -217,7 +242,8 @@ export async function setupSpecKit(projectRoot: string, spinner?: ReturnType<typ
   try {
     // Pass 'y\n' to stdin to answer the non-empty directory confirmation prompt.
     // Use --integration (--ai is deprecated since v0.10.0).
-    execSync('specify init . --integration copilot', {
+    const integration = pickSpecifyIntegration(platforms);
+    execSync(`specify init . --integration ${integration}`, {
       cwd: projectRoot,
       stdio: 'pipe',
       input: 'y\n',
@@ -390,10 +416,18 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   // Step 3: Install spec-kit
   const specKitOk = await ensureSpecKit();
 
-  // Step 4: Initialize spec-kit for the project
+  // Step 4: Initialize spec-kit for the project (use configured platforms if available)
   let specKitInitOk = false;
   if (specKitOk) {
-    specKitInitOk = await setupSpecKit(projectRoot);
+    let configPlatforms: TargetPlatform[] = ['copilot'];
+    const cfgPath = path.join(projectRoot, '.agent-framework.json');
+    if (await fs.pathExists(cfgPath)) {
+      const cfg = await fs.readJson(cfgPath).catch(() => ({}));
+      if (Array.isArray(cfg.platforms) && cfg.platforms.length > 0) {
+        configPlatforms = cfg.platforms as TargetPlatform[];
+      }
+    }
+    specKitInitOk = await setupSpecKit(projectRoot, configPlatforms);
   }
 
   // Step 5: Install spec-kit extensions (filter based on project type)

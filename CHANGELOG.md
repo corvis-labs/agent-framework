@@ -7,7 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2025-01-20
+## [3.0.0] - 2026-05-19
+
+### Breaking Changes
+- **Multi-platform output by default** — `acli init` now prompts for target platforms and emits agent files to all selected destinations. Existing single-platform setups continue to work; re-running `acli init --force` will add the new platform files.
+- **`AgentManager` constructor signature changed** — now accepts `platforms: TargetPlatform[]` and `frameworkVersion` parameters. Direct API consumers must update instantiation calls.
+- **`setupSpecKit` signature changed** — accepts optional `platforms: TargetPlatform[]` to select the correct `specify --integration` value. Callers that relied on the positional `spinner` argument must update.
+
+### Added
+- **Multi-platform agent deployment** — agents are now emitted to all configured target platforms simultaneously:
+  - `copilot` → `.github/agents/{name}.agent.md`
+  - `cursor` → `.cursor/rules/{name}.mdc` (YAML frontmatter + `alwaysApply: false`)
+  - `claude` → `AGENTS.md` (aggregated, one `## Heading` section per agent)
+  - `windsurf` → `.windsurf/rules/{name}.md` (YAML frontmatter + `trigger: always_on`)
+  - `open-plugins` → `.agents/plugins/agent-framework/agents/{name}.agent.md`
+- **Open Plugins standard support** — full conformance with the [open-plugins.com](https://open-plugins.com) specification. Auto-generates `.plugin/plugin.json` manifest after every `acli install` / `acli remove`; discoverable by Cursor Directory, Claude Code, and other conformant tools.
+- **`TargetPlatform` type** — exported from `src/core/Agent.ts`; values: `'copilot' | 'cursor' | 'claude' | 'windsurf' | 'open-plugins'`
+- **`PlatformEmitter`** (`src/core/PlatformEmitter.ts`) — new module that resolves platform-specific output paths and writes agent files; exports `platformDestPath`, `emitAgent`, `emitAgentsClaude`, `ensurePlatformDirs`
+- **`PluginGenerator`** (`src/core/PluginGenerator.ts`) — new module that creates and maintains the Open Plugins `.plugin/plugin.json` manifest after each install/remove operation
+- **`acli extensions` command group** — full extension lifecycle management across both ecosystems:
+  - `acli extensions list [--available] [--ecosystem speckit|open-plugins]`
+  - `acli extensions add <name> [--from <url>] [--ecosystem …] [--force]`
+  - `acli extensions remove <name> [--yes]`
+  - `acli extensions create <name>` — scaffold a new custom open-plugins plugin with starter agent and skill
+  - `acli extensions pack <name>` — package a plugin as a distributable zip for sharing
+- **Platform-aware `specify --integration`** — `setupSpecKit()` now maps `TargetPlatform` to the correct spec-kit integration flag (`copilot`, `cursor`, `claude`, `windsurf`) instead of hardcoding `copilot`
+- **`gray-matter` dependency** — used for standards-compliant YAML frontmatter generation across all platform outputs
+- **`@modelcontextprotocol/sdk` dependency** — MCP SDK wired in for future MCP server generation support
+- **Custom plugin authoring workflow** — `acli extensions create` scaffolds a complete open-plugins structure (`.plugin/plugin.json`, `agents/`, `skills/`, `rules/`); `acli extensions pack` produces a distributable zip compatible with `acli extensions add --from <url>`
+- **`--platforms` option on `acli init`** — non-interactive platform selection for CI/scripted environments
+
+### Changed
+- **`AgentManager`** — completely rewritten to use `PlatformEmitter` and `PluginGenerator`; `installAgent()` now returns `Map<TargetPlatform, string>` (platform → written path); `listInstalled()` falls back to open-plugins directory when Copilot directory is absent
+- **`Agent.generateForPlatform(platform)`** — new dispatch method in base class; `generateCursorRule()` and `generateWindsurfRule()` use `gray-matter` for frontmatter generation
+- **`acli init`** — interactive platform selection (checkbox, defaults: `copilot` + `open-plugins`); persists `platforms` array to `.agent-framework.json`; calls `ensurePlatformDirs` for all selected platforms
+- **`acli install`** — reads `config.platforms` and passes it to `AgentManager`; success output now shows per-platform destination paths
+- **`acli remove`** — reads `config.platforms` and passes it to `AgentManager`; removes agent files from all platforms
+- **`acli list`** — reads `config.platforms` from config; consistent with multi-platform `AgentManager`
+- **`acli update`** — reads `config.platforms` from config; re-emits agents to all configured platforms on update
+- **`acli setup`** — reads `config.platforms` from `.agent-framework.json` before running `specify init` so the correct `--integration` flag is used
+
+### Security
+- `acli extensions add --from <url>`: validates HTTPS-only URLs before download; rejects `http://` and non-URL strings
+- Extension names validated against `/^[a-zA-Z0-9_-]+$/` before interpolation into shell commands to prevent command injection
+
 
 ### Breaking Changes
 - **Command namespace simplified** — all `/acli.beads.xxx` commands renamed to `/acli.xxx` (e.g., `/acli.beads.constitution` → `/acli.constitution`)

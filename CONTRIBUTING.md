@@ -32,27 +32,50 @@ npm run lint
 
 ## Project Structure
 
+## Project Structure
+
 ```
 agent-framework/
 ├── src/
-│   ├── cli.ts              # CLI entry point
-│   ├── commands/           # CLI commands
-│   ├── core/               # Core framework classes
-│   └── agents/             # Pre-built agents
-├── templates/              # Agent and skill templates
-└── tests/                  # Test files
+│   ├── cli.ts                  # CLI entry point (Commander program)
+│   ├── commands/               # CLI command handlers
+│   │   ├── init.ts             # acli init — platform selection, project scaffolding
+│   │   ├── install.ts          # acli install — emit agent to all platforms
+│   │   ├── remove.ts           # acli remove — remove from all platforms
+│   │   ├── list.ts             # acli list agents|skills
+│   │   ├── update.ts           # acli update — re-emit to all platforms
+│   │   ├── setup.ts            # acli setup — dep install + speckit/beads init
+│   │   ├── config.ts           # acli config
+│   │   └── extensions.ts       # acli extensions list|add|remove|create|pack
+│   ├── core/                   # Core framework classes
+│   │   ├── Agent.ts            # Abstract Agent base class + TargetPlatform type
+│   │   ├── AgentManager.ts     # File-based agent lifecycle manager
+│   │   ├── PlatformEmitter.ts  # Writes agent files to platform-specific paths
+│   │   └── PluginGenerator.ts  # Maintains Open Plugins .plugin/plugin.json manifest
+│   └── agents/                 # Pre-built agent implementations
+│       ├── index.ts
+│       ├── architect/
+│       ├── development/
+│       ├── orchestrator/
+│       ├── qa/
+│       └── security/
+├── templates/                  # Agent and skill templates
+│   ├── agent.template.md
+│   ├── skill.template.md
+│   ├── prompts/                # Slash command prompt files
+│   ├── skills/                 # Bundled skill files
+│   └── beads/                  # Beads checklist templates
+└── tests/                      # Test files
 ```
 
 ## Adding a New Pre-built Agent
 
-1. Create a new directory under `src/agents/`
-2. Create your agent class extending `Agent`
-3. Implement required methods
+1. Create a directory under `src/agents/<name>/`
+2. Extend the `Agent` base class
+3. Implement `generateAgentFile()` and `getInstructions()`
 4. Export in `src/agents/index.ts`
-5. Add tests
-6. Update documentation
+5. Add tests and update documentation
 
-Example:
 ```typescript
 import { Agent, AgentMetadata, AgentConfig } from '../../core/Agent';
 
@@ -63,17 +86,9 @@ export class MyAgent extends Agent {
       displayName: 'My Agent',
       description: 'Description of what this agent does',
       version: '1.0.0',
-      tags: ['tag1', 'tag2']
+      tags: ['tag1', 'tag2'],
     };
-
-    const config: AgentConfig = {
-      // VS Code only supports: agents, argument-hint, description, 
-      // disable-model-invocation, github, handoffs, model, name, 
-      // target, tools, user-invocable
-      // Only name and description are included in frontmatter by default
-    };
-
-    super(metadata, config);
+    super(metadata, {});
   }
 
   generateAgentFile(): string {
@@ -81,14 +96,32 @@ export class MyAgent extends Agent {
   }
 
   getInstructions(): string {
-    return `# My Agent Instructions...`;
-  }
-
-  getSystemPrompt(): string {
-    return 'System prompt for the agent...';
+    return `# My Agent\n\n...`;
   }
 }
 ```
+
+The base class `generateForPlatform(platform)` dispatches to the right generator for each `TargetPlatform`. Override `generateCursorRule()`, `generateWindsurfRule()`, or `generateClaudeSection()` if you need platform-specific output.
+
+## Adding a New Platform
+
+1. Add the value to the `TargetPlatform` union in `src/core/Agent.ts`
+2. Add a `case` in `Agent.generateForPlatform()` and `platformDestPath()` in `PlatformEmitter.ts`
+3. Add directory creation in `ensurePlatformDirs()` in `PlatformEmitter.ts`
+4. Add the platform to `ALL_PLATFORMS` in `src/commands/init.ts`
+5. Map the platform to a `specify --integration` value in `setup.ts`
+
+## Building a Custom Plugin
+
+Use the CLI to scaffold:
+
+```bash
+acli extensions create my-plugin --description "..." --author "You"
+# Edit .agents/plugins/my-plugin/agents/my-plugin.agent.md
+acli extensions pack my-plugin   # → my-plugin-v1.0.0.zip
+```
+
+See [EXAMPLES.md](EXAMPLES.md) for a full walkthrough.
 
 ## Code Style
 

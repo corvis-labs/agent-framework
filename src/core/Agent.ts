@@ -1,3 +1,5 @@
+import matter from 'gray-matter';
+
 export interface HandoffConfig {
   label: string;
   agent: string;
@@ -15,29 +17,36 @@ export interface AgentMetadata {
   dependencies?: string[];
 }
 
+/**
+ * Target output platforms supported by the framework.
+ * - copilot:      GitHub Copilot / VS Code (.github/agents/*.agent.md)
+ * - cursor:       Cursor AI (.cursor/rules/*.mdc)
+ * - claude:       Claude Code (AGENTS.md)
+ * - windsurf:     Windsurf (.windsurf/rules/*.md)
+ * - open-plugins: Open Plugins canonical structure (.agents/plugins/<name>/)
+ */
+export type TargetPlatform = 'copilot' | 'cursor' | 'claude' | 'windsurf' | 'open-plugins';
+
 export interface AgentConfig {
-  // Platform target: 'vscode' (default) or 'github-copilot'
-  // Determines which attributes are valid in the frontmatter:
-  //   github-copilot: description, github, infer, mcp-servers, name, target, tools
-  //   vscode: agents, argument-hint, description, disable-model-invocation,
-  //           github, handoffs, model, name, target, tools, user-invocable
+  // Legacy platform selector — kept for backward compatibility.
+  // Prefer 'targetPlatforms' for new multi-platform configs.
   platform?: 'vscode' | 'github-copilot';
 
-  // Shared attributes (both platforms)
+  // Shared attributes (all platforms)
   tools?: string[];
   github?: any;
 
-  // VS Code only attributes
-  agents?: string[];               // Other agents this agent can invoke
-  argumentHint?: string;           // Hint about how to invoke this agent
-  userInvocable?: boolean;         // Whether user can invoke directly (default: true)
-  model?: string;                  // Specific model to use
-  handoffs?: HandoffConfig[];       // Agents to handoff to
+  // VS Code / Copilot only attributes
+  agents?: string[];
+  argumentHint?: string;
+  userInvocable?: boolean;
+  model?: string;
+  handoffs?: HandoffConfig[];
   disableModelInvocation?: boolean;
 
   // github-copilot only attributes
-  infer?: boolean;                 // Whether copilot should infer context
-  mcpServers?: string[];           // MCP server configurations
+  infer?: boolean;
+  mcpServers?: string[];
 }
 
 export abstract class Agent {
@@ -78,6 +87,63 @@ export abstract class Agent {
    */
   getSystemPrompt(): string {
     return this.getInstructions();
+  }
+
+  /**
+   * Generate agent file content for a specific target platform.
+   * This is the primary entry point used by PlatformEmitter.
+   */
+  generateForPlatform(platform: TargetPlatform): string {
+    switch (platform) {
+      case 'copilot':
+        return this.generateAgentFile();
+      case 'cursor':
+        return this.generateCursorRule();
+      case 'claude':
+        return this.generateClaudeSection();
+      case 'windsurf':
+        return this.generateWindsurfRule();
+      case 'open-plugins':
+        return this.generateAgentFile(); // Open Plugins uses the canonical .agent.md format
+      default:
+        return this.generateAgentFile();
+    }
+  }
+
+  /**
+   * Generate a Cursor .mdc rule file.
+   * Uses gray-matter to produce valid YAML frontmatter.
+   */
+  protected generateCursorRule(): string {
+    const fm: Record<string, unknown> = {
+      description: this.metadata.description,
+      alwaysApply: false,
+    };
+    if (this.metadata.tags && this.metadata.tags.length > 0) {
+      fm['globs'] = '';
+    }
+    return matter.stringify(`\n# ${this.metadata.displayName}\n\n${this.getInstructions()}`, fm);
+  }
+
+  /**
+   * Generate a Windsurf rule file (.windsurf/rules/*.md).
+   * Windsurf uses the same frontmatter format as Cursor.
+   */
+  protected generateWindsurfRule(): string {
+    const fm: Record<string, unknown> = {
+      description: this.metadata.description,
+      trigger: 'always_on',
+    };
+    return matter.stringify(`\n# ${this.metadata.displayName}\n\n${this.getInstructions()}`, fm);
+  }
+
+  /**
+   * Generate a markdown section for inclusion in AGENTS.md (Claude Code).
+   * Each agent contributes one top-level section.
+   */
+  generateClaudeSection(): string {
+    const tags = this.metadata.tags ? `\n_Tags: ${this.metadata.tags.join(', ')}_\n` : '';
+    return `## ${this.metadata.displayName}\n\n> ${this.metadata.description}\n${tags}\n${this.getInstructions()}\n`;
   }
 
   /**

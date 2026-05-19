@@ -4,6 +4,7 @@ import ora from 'ora';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { AgentManager } from '../core/AgentManager';
+import { TargetPlatform } from '../core/Agent';
 
 interface RemoveOptions {
   yes?: boolean;
@@ -19,7 +20,8 @@ export async function removeCommand(name: string, options: RemoveOptions): Promi
   }
 
   const config = await fs.readJson(configPath);
-  const agentManager = new AgentManager(projectRoot, config.agentsDir);
+  const platforms: TargetPlatform[] = config.platforms ?? ['copilot', 'open-plugins'];
+  const agentManager = new AgentManager(projectRoot, config.agentsDir, platforms, config.version ?? '2.0.0');
 
   // Check if agent is installed
   if (!(await agentManager.isInstalled(name))) {

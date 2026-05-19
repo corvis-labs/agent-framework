@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { getPrebuiltAgents } from '../agents';
 import { AgentManager } from '../core/AgentManager';
+import { TargetPlatform } from '../core/Agent';
 
 interface InstallOptions {
   force?: boolean;
@@ -82,7 +83,8 @@ export async function installAgent(name: string, options: InstallOptions, projec
   }
 
   const config = await fs.readJson(configPath);
-  const agentManager = new AgentManager(projectRoot, config.agentsDir);
+  const platforms: TargetPlatform[] = config.platforms ?? ['copilot', 'open-plugins'];
+  const agentManager = new AgentManager(projectRoot, config.agentsDir, platforms, config.version ?? '2.0.0');
 
   // Get pre-built agents
   const prebuiltAgents = getPrebuiltAgents();
@@ -117,6 +119,10 @@ export async function installAgent(name: string, options: InstallOptions, projec
       for (const agentName of installed) {
         console.log(chalk.gray(`  - ${agentName}`));
       }
+      console.log(chalk.cyan('\nTarget platforms:'));
+      for (const p of platforms) {
+        console.log(chalk.gray(`  - ${p}`));
+      }
       console.log(chalk.cyan('\nSlash commands installed:'));
       for (const p of PROMPTS) {
         console.log(chalk.gray(`  - /${p.replace('.prompt.md', '')}`));
@@ -125,8 +131,9 @@ export async function installAgent(name: string, options: InstallOptions, projec
       for (const s of SKILLS) {
         console.log(chalk.gray(`  - ${s.replace('.skill.md', '')}`));
       }
-      console.log(chalk.cyan('\nIn Copilot Chat, use /acli.constitution to start your workflow.'));
-      console.log(chalk.gray(`Agents: ${config.agentsDir} | Prompts: .github/prompts/ | Skills: .github/skills/`));
+      console.log(chalk.cyan('\nStart your workflow:'));
+      console.log(chalk.gray('  GitHub Copilot: /acli.constitution'));
+      console.log(chalk.gray('  Cursor/Claude:  open chat and reference @architect'));
     } catch (error) {
       spinner.fail('Failed to install agents');
       console.error(chalk.red((error as Error).message));
@@ -137,11 +144,13 @@ export async function installAgent(name: string, options: InstallOptions, projec
 
     try {
       const agent = prebuiltAgents[name];
-      await agentManager.installAgent(agent, options.force);
-      
-      spinner.succeed(`Agent "${name}" installed.`);
-      console.log(chalk.gray(`Location: ${path.join(config.agentsDir, name)}`));
-      console.log(chalk.cyan(`\nUse @${name} in VS Code Copilot Chat to invoke this agent.`));
+      const written = await agentManager.installAgent(agent, options.force);
+
+      spinner.succeed(`Agent "${name}" installed to ${written.size} platform(s).`);
+      for (const [platform, dest] of written.entries()) {
+        console.log(chalk.gray(`  ${platform.padEnd(14)} → ${dest.replace(process.cwd() + '/', '')}`));
+      }
+      console.log(chalk.cyan(`\nUse @${name} in your AI editor to invoke this agent.`));
     } catch (error) {
       spinner.fail(`Failed to install agent "${name}"`);
       console.error(chalk.red((error as Error).message));
