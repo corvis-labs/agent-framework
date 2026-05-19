@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-05-19
+
+### Added
+- **`vercel-labs/skills` compatibility** — skills are now emitted to platform-specific paths recognised by `npx skills list` / `npx skills update` with no additional configuration:
+  - GitHub Copilot, Cursor, Open Plugins → `.agents/skills/{name}/SKILL.md`
+  - Claude Code → `.claude/skills/{name}/SKILL.md`
+  - Windsurf → `.windsurf/skills/{name}/SKILL.md`
+- **`PlatformEmitter.skillDestPath()`** — returns the correct `npx skills` destination for any `TargetPlatform`
+- **`PlatformEmitter.emitSkill()`** — writes a SKILL.md to all unique platform paths, with deduplication
+- **`setup.ts: installBundledSkills()`** — copies all bundled `templates/skills/*.skill.md` to platform paths during `acli setup`; `npx skills list` will show them automatically
+- **`acli extensions add <github-shorthand>`** — GitHub shorthands (`owner/repo`), GitHub/GitLab URLs, and `skills.sh` URLs are automatically routed to `npx skills add` instead of the zip downloader
+- **`acli extensions create --with-skill`** — the scaffolded SKILL.md is also emitted to `npx skills` compatible paths immediately after creation
+- `ensurePlatformDirs` now creates skills directories for all platforms on init
+
 ## [3.0.0] - 2026-05-19
 
 ### Breaking Changes

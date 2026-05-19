@@ -5,6 +5,11 @@
  *   speckit       — installed via the `specify extension add` CLI command
  *   open-plugins  — installed by downloading a zip to .agents/plugins/<name>/
  *
+ * Also integrates with the vercel-labs/skills ecosystem:
+ *   When the source looks like a GitHub shorthand (owner/repo) or a skills.sh
+ *   URL, the command delegates to `npx skills add` which handles installation
+ *   to all detected agents automatically.
+ *
  * Commands:
  *   acli extensions list [--available] [--ecosystem speckit|open-plugins]
  *   acli extensions add <name> [--from <url>] [--ecosystem speckit|open-plugins] [--force]
@@ -21,6 +26,8 @@ import * as os from 'os';
 import { createWriteStream } from 'fs';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
+import { emitSkill } from '../core/PlatformEmitter';
+import { TargetPlatform } from '../core/Agent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -377,6 +384,53 @@ async function listInstalledSpeckitExtensions(projectRoot: string): Promise<Inst
     .map((name) => ({ name, ecosystem: 'speckit' as Ecosystem }));
 }
 
+// ─── vercel-labs/skills Integration ──────────────────────────────────────────
+
+/**
+ * Returns true if `source` looks like a GitHub shorthand (`owner/repo` or
+ * `owner/repo/tree/branch/path`) or a skills.sh URL — formats understood by
+ * `npx skills add` but NOT by our zip-downloader.
+ */
+function isNpxSkillsSource(source: string): boolean {
+  // skills.sh URL
+  if (source.startsWith('https://skills.sh/')) return true;
+  // github.com URL (not a raw .zip archive)
+  if (source.startsWith('https://github.com/') && !source.endsWith('.zip')) return true;
+  // GitLab URL
+  if (source.startsWith('https://gitlab.com/')) return true;
+  // Plain owner/repo shorthand (no protocol, no .zip, contains exactly one slash)
+  if (!source.includes('://') && /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+/.test(source)) return true;
+  return false;
+}
+
+/**
+ * Delegate to `npx skills add <source>` with appropriate flags.
+ * This installs skills to every detected agent on the machine.
+ */
+async function installViaNpxSkills(
+  source: string,
+  options: { force?: boolean; skillName?: string },
+  spinner?: ReturnType<typeof ora>,
+): Promise<void> {
+  const args: string[] = ['skills', 'add', source, '--yes'];
+  if (options.skillName) args.push('--skill', options.skillName);
+  if (options.force) args.push('--copy'); // --copy avoids symlink conflicts on reinstall
+
+  const s = spinner ?? ora(`Running: npx ${args.join(' ')}...`).start();
+  s.text = `Running: npx ${args.join(' ')}`;
+
+  try {
+    execSync(`npx ${args.join(' ')}`, {
+      stdio: 'inherit',
+      timeout: 120_000,
+    });
+    s.succeed(`Skills installed via npx skills add. Run ${chalk.cyan('npx skills list')} to verify.`);
+  } catch (err) {
+    s.fail(`npx skills add failed: ${(err as Error).message}`);
+    throw err;
+  }
+}
+
 // ─── Command Handlers ─────────────────────────────────────────────────────────
 
 export async function extensionsListCommand(options: ExtensionsListOptions): Promise<void> {
@@ -476,6 +530,19 @@ export async function extensionsAddCommand(
 
   // Security: validate URL
   validateHttpsUrl(source);
+
+  // ── vercel-labs/skills sources — delegate to `npx skills add` ──────────────
+  // GitHub URLs (non-zip), GitLab URLs, and owner/repo shorthands are handled
+  // by `npx skills add` which auto-detects agents and installs SKILL.md files.
+  if (isNpxSkillsSource(source)) {
+    const spinner = ora(`Installing skills from ${chalk.cyan(source)}...`).start();
+    try {
+      await installViaNpxSkills(source, { force: options.force });
+    } catch {
+      process.exit(1);
+    }
+    return;
+  }
 
   // Default ecosystem if not specified: prefer speckit for known names, open-plugins otherwise
   if (!ecosystem) {
@@ -796,8 +863,20 @@ export async function extensionsCreateCommand(
   // ── Starter skill ──────────────────────────────────────────────────────────
   if (withSkill) {
     await fs.ensureDir(skillsDir);
+    const skillContent = scaffoldSkillFile(name, description);
     const skillFile = path.join(skillsDir, 'SKILL.md');
-    await fs.writeFile(skillFile, scaffoldSkillFile(name, description), 'utf-8');
+    await fs.writeFile(skillFile, skillContent, 'utf-8');
+
+    // Also emit to vercel-labs/skills compatible paths so `npx skills list` sees it
+    const cfgPath = path.join(projectRoot, '.agent-framework.json');
+    let platforms: TargetPlatform[] = ['copilot', 'open-plugins'];
+    if (await fs.pathExists(cfgPath)) {
+      const cfg = await fs.readJson(cfgPath).catch(() => ({}));
+      if (Array.isArray(cfg.platforms) && cfg.platforms.length > 0) {
+        platforms = cfg.platforms as TargetPlatform[];
+      }
+    }
+    await emitSkill(name, skillContent, platforms, projectRoot, options.force);
   }
 
   spinner.succeed(`Plugin ${chalk.cyan(name)} created at .agents/plugins/${name}/`);

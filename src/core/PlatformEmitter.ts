@@ -10,6 +10,12 @@
  *
  * The Open Plugins spec (open-plugins.com) defines the canonical layout used by
  * Cursor Directory and other conformant tools.
+ *
+ * Skills are also emitted to vercel-labs/skills compatible paths so that
+ * `npx skills list` and `npx skills update` see them without any extra config:
+ *   copilot / cursor / open-plugins → .agents/skills/{name}/SKILL.md
+ *   claude                          → .claude/skills/{name}/SKILL.md
+ *   windsurf                        → .windsurf/skills/{name}/SKILL.md
  */
 
 import * as path from 'path';
@@ -101,6 +107,71 @@ export async function emitAgentsClaude(
   return dest;
 }
 
+// ─── Skill Emission (vercel-labs/skills compatible) ─────────────────────────
+
+/**
+ * Returns the `npx skills`-compatible destination path for a skill on a given platform.
+ *
+ * Layout follows https://github.com/vercel-labs/skills#supported-agents:
+ *   copilot / cursor / open-plugins → .agents/skills/{name}/SKILL.md
+ *   claude                          → .claude/skills/{name}/SKILL.md
+ *   windsurf                        → .windsurf/skills/{name}/SKILL.md
+ */
+export function skillDestPath(
+  skillName: string,
+  platform: TargetPlatform,
+  projectRoot: string,
+): string {
+  switch (platform) {
+    case 'claude':
+      return path.join(projectRoot, '.claude', 'skills', skillName, 'SKILL.md');
+    case 'windsurf':
+      return path.join(projectRoot, '.windsurf', 'skills', skillName, 'SKILL.md');
+    case 'copilot':
+    case 'cursor':
+    case 'open-plugins':
+    default:
+      // .agents/skills/ is the shared path recognised by Copilot, Cursor, Codex, Amp,
+      // OpenCode, Gemini CLI, Replit, Cline, and more (vercel-labs/skills §Supported Agents)
+      return path.join(projectRoot, '.agents', 'skills', skillName, 'SKILL.md');
+  }
+}
+
+/**
+ * Write a SKILL.md file to every unique platform-specific skills directory
+ * implied by `platforms`.  Deduplication is handled internally so the same
+ * `.agents/skills/` path is only written once even if both `copilot` and
+ * `cursor` are selected.
+ *
+ * Returns a list of file paths that were written.
+ */
+export async function emitSkill(
+  skillName: string,
+  content: string,
+  platforms: TargetPlatform[],
+  projectRoot: string,
+  force = false,
+): Promise<string[]> {
+  const written: string[] = [];
+  const seen = new Set<string>();
+
+  for (const platform of platforms) {
+    const dest = skillDestPath(skillName, platform, projectRoot);
+    if (seen.has(dest)) continue;
+    seen.add(dest);
+
+    if (!force && (await fs.pathExists(dest))) continue;
+
+    await fs.ensureDir(path.dirname(dest));
+    await fs.writeFile(dest, content, 'utf-8');
+    written.push(dest);
+  }
+
+  return written;
+}
+
+// ─── Platform Directory Setup ─────────────────────────────────────────────────
+
 /**
  * Ensure the required directories exist for each platform.
  */
@@ -117,16 +188,25 @@ export async function ensurePlatformDirs(
           path.join(projectRoot, '.github', 'agents'),
           path.join(projectRoot, '.github', 'prompts'),
           path.join(projectRoot, '.github', 'skills'),
+          // vercel-labs/skills compatible path (shared with cursor, codex, amp, etc.)
+          path.join(projectRoot, '.agents', 'skills'),
         );
         break;
       case 'cursor':
-        dirsToCreate.push(path.join(projectRoot, '.cursor', 'rules'));
+        dirsToCreate.push(
+          path.join(projectRoot, '.cursor', 'rules'),
+          path.join(projectRoot, '.agents', 'skills'),
+        );
         break;
       case 'claude':
-        // AGENTS.md at project root — no dir needed
+        // AGENTS.md at project root — no dir needed for agents
+        dirsToCreate.push(path.join(projectRoot, '.claude', 'skills'));
         break;
       case 'windsurf':
-        dirsToCreate.push(path.join(projectRoot, '.windsurf', 'rules'));
+        dirsToCreate.push(
+          path.join(projectRoot, '.windsurf', 'rules'),
+          path.join(projectRoot, '.windsurf', 'skills'),
+        );
         break;
       case 'open-plugins':
         dirsToCreate.push(

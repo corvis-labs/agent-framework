@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { execSync } from 'child_process';
 import inquirer from 'inquirer';
 import { TargetPlatform } from '../core/Agent';
+import { emitSkill } from '../core/PlatformEmitter';
 
 /**
  * Maps a TargetPlatform to the corresponding `specify --integration` value.
@@ -213,6 +214,60 @@ export async function installSpecKitPlugins(
   }
 
   return installed;
+}
+
+/**
+ * Copy the bundled SKILL.md files from templates/skills/ to the
+ * vercel-labs/skills compatible paths for every selected platform.
+ *
+ * This makes `npx skills list` and `npx skills update` work out of the box
+ * without any additional configuration.
+ */
+export async function installBundledSkills(
+  projectRoot: string,
+  platforms: TargetPlatform[] = ['copilot'],
+  spinner?: ReturnType<typeof ora>,
+): Promise<string[]> {
+  const s = spinner || ora('Installing bundled skills...').start();
+
+  // Bundled skills live alongside the compiled CLI (dist/commands → dist → package root → templates)
+  const templatesDir = path.join(__dirname, '..', '..', 'templates', 'skills');
+
+  if (!(await fs.pathExists(templatesDir))) {
+    s.warn('Bundled skills directory not found — skipping skill installation.');
+    return [];
+  }
+
+  const entries = await fs.readdir(templatesDir);
+  const skillFiles = entries.filter((f) => f.endsWith('.skill.md') || f === 'SKILL.md');
+
+  if (skillFiles.length === 0) {
+    s.warn('No bundled skills found.');
+    return [];
+  }
+
+  const written: string[] = [];
+
+  for (const file of skillFiles) {
+    // Derive skill name from filename, e.g. "speckit-checklist.skill.md" → "speckit-checklist"
+    const skillName = file.replace(/\.skill\.md$/, '').replace(/\.md$/, '');
+    const content = await fs.readFile(path.join(templatesDir, file), 'utf-8');
+
+    s.text = `Installing skill: ${skillName}...`;
+    const paths = await emitSkill(skillName, content, platforms, projectRoot);
+    written.push(...paths);
+  }
+
+  if (written.length > 0) {
+    s.succeed(
+      `Installed ${skillFiles.length} bundled skill(s) to ${written.length} path(s). ` +
+      chalk.gray('(npx skills list will find them automatically)'),
+    );
+  } else {
+    s.succeed('Bundled skills already up to date.');
+  }
+
+  return written;
 }
 
 // ─── Project-Level Initialisation (used by `acli init`) ──────────────────────
@@ -435,6 +490,17 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
   if (specKitOk) {
     plugins = await installSpecKitPlugins({ includeBrownfield: wantBrownfield });
   }
+
+  // Step 5b: Copy bundled SKILL.md files to npx-skills-compatible paths
+  let configPlatformsForSkills: TargetPlatform[] = ['copilot'];
+  const cfgPathForSkills = path.join(projectRoot, '.agent-framework.json');
+  if (await fs.pathExists(cfgPathForSkills)) {
+    const cfg = await fs.readJson(cfgPathForSkills).catch(() => ({}));
+    if (Array.isArray(cfg.platforms) && cfg.platforms.length > 0) {
+      configPlatformsForSkills = cfg.platforms as TargetPlatform[];
+    }
+  }
+  await installBundledSkills(projectRoot, configPlatformsForSkills);
 
   // Step 6: Install beads (only if user chose beads-based memory)
   let beadsOk = false;
