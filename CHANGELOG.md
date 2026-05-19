@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-05-19
+
+### Added
+- **`PromptOptimizer`** (`src/core/PromptOptimizer.ts`) — utility class for reducing agent system-prompt token count. Passes: strip emoji from headings, remove boilerplate Identity/Communication sections, collapse blank lines. Exposes `estimateTokens(text)` and `report(original, compressed)`. Typical savings: 15–25%.
+- **`AgentConfig.compact?: boolean`** — when `true`, all generated platform output is automatically passed through `PromptOptimizer.compress()`. Set per-agent in config; no code changes elsewhere needed.
+- **`Agent.buildSpecKitBlock(options)`** — protected base-class method that generates the Spec-Kit workflow integration block from structured options (files, fallback, commands, extraSections). Replaces the copy-pasted block that previously appeared verbatim in all five agents.
+- **`templates/skills/security-owasp-checklist.skill.md`** — new on-demand skill containing the full OWASP-aligned security test coverage checklist (10 categories, 45+ items) and severity classification table. Loaded only when the user runs `/acli.checklist`, not on every turn.
+- **Tool restrictions per agent** — each agent's `AgentConfig` now declares a `tools` allowlist scoped to its role: QA and Security are read-only; Architect excludes terminal; Backend and Frontend include `run_in_terminal`.
+- **`security-owasp-checklist` added to `SKILLS`** install list in `install.ts` — copied to `.github/skills/` during `acli install`.
+
+### Changed
+- All five built-in agents (Architect, Backend, Frontend, QA, Security) now call `buildSpecKitBlock()` instead of embedding a near-identical Spec-Kit preamble inline. Single source of truth; ~120–180 tokens removed per agent from the duplicated block.
+- `SecurityAgent` — inline severity classification scale and 10-item security test coverage checklist removed from system prompt. Both now live in `security-owasp-checklist.skill.md` and are referenced via `/acli.checklist`.
+- `PromptOptimizer` exported from `src/agents/index.ts` for programmatic use.
+- `SecurityAgent` metadata declares `dependencies: ['security-owasp-checklist']`.
+
 ## [3.3.0] - 2026-05-19
 
 ### Added

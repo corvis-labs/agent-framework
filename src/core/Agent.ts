@@ -1,4 +1,5 @@
 import matter from 'gray-matter';
+import { PromptOptimizer } from './PromptOptimizer';
 
 export interface HandoffConfig {
   label: string;
@@ -47,6 +48,13 @@ export interface AgentConfig {
   // github-copilot only attributes
   infer?: boolean;
   mcpServers?: string[];
+
+  /**
+   * When true, all generated output passes through PromptOptimizer.compress().
+   * Strips emoji from headers, removes boilerplate Identity/Communication sections,
+   * and collapses blank lines — typically saves 15–25% of tokens.
+   */
+  compact?: boolean;
 }
 
 export abstract class Agent {
@@ -90,10 +98,51 @@ export abstract class Agent {
   }
 
   /**
+   * Spec-Kit workflow integration block, shared by all agents.
+   * Each agent passes its own file list, fallback advice, and commands.
+   */
+  protected buildSpecKitBlock(options: {
+    trigger?: string;
+    files: Array<{ path: string; note: string }>;
+    fallback: string;
+    commands: Array<{ cmd: string; description: string }>;
+    extraSections?: string;
+  }): string {
+    const trigger = options.trigger ?? 'Before every task';
+    const fileList = options.files
+      .map((f, i) => `${i + 1}. **\`${f.path}\`** — ${f.note}`)
+      .join('\n');
+    const cmdList = options.commands
+      .map((c) => `- \`${c.cmd}\` — ${c.description}`)
+      .join('\n');
+    const extra = options.extraSections ? `\n${options.extraSections}` : '';
+    return [
+      '---',
+      '',
+      '## Spec-Kit Workflow Integration',
+      '',
+      `${trigger}, load these files if they exist:`,
+      '',
+      fileList,
+      '',
+      `If none exist: ${options.fallback}`,
+      '',
+      '### Slash Commands',
+      cmdList,
+      extra,
+    ].join('\n');
+  }
+
+  /**
    * Generate agent file content for a specific target platform.
    * This is the primary entry point used by PlatformEmitter.
    */
   generateForPlatform(platform: TargetPlatform): string {
+    const raw = this._generateForPlatformRaw(platform);
+    return this.config.compact ? PromptOptimizer.compress(raw) : raw;
+  }
+
+  private _generateForPlatformRaw(platform: TargetPlatform): string {
     switch (platform) {
       case 'copilot':
         return this.generateAgentFile();

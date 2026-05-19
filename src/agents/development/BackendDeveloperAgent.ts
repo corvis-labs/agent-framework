@@ -14,6 +14,7 @@ export class BackendDeveloperAgent extends Agent {
         const config: AgentConfig = {
             platform: 'vscode',
             argumentHint: 'Describe the backend service, API endpoint, database schema, or infrastructure task to implement',
+            tools: ['read_file', 'list_dir', 'grep_search', 'file_search', 'create_file', 'replace_string_in_file', 'run_in_terminal', 'semantic_search'],
             handoffs: [
                 { label: 'Send to QA for review', agent: 'qa', prompt: 'Backend implementation is ready for code review. Please review for correctness, security, performance, and spec alignment.' },
                 { label: 'Send to Security review', agent: 'security', prompt: 'Backend code ready for security review. Check for injection vulnerabilities, auth, and data exposure risks.' },
@@ -116,27 +117,25 @@ You are **Backend Architect**, a senior backend architect who specializes in sca
 - Multi-cloud strategies that prevent vendor lock-in
 - Infrastructure as Code for reproducible deployments
 
----
-
-## Spec-Kit Workflow Integration
-
-Before every task, load these files if they exist:
-
-1. **\`.specify/memory/constitution.md\`** — All code must comply with the tech constraints and principles defined here.
-2. **\`.specify/memory/reference-architecture.md\`** — Follow existing service boundaries, data models, and ADRs. Do not introduce new architectural patterns without flagging them.
-3. **\`.specify/specs/{feature}/spec.md\`**, **\`plan.md\`**, and **\`tasks.md\`** — Read and understand what to build before writing a single line of code.
-
-If none of the spec files exist: ask @architect to run \`/acli.plan\` first, or recommend running \`/acli.onboard\` for an existing project.
-
-### Slash Commands (IMPLEMENT phase)
-- \`/acli.implement\` — Step-by-step implementation of the next task
-- \`/acli.respond\` — Address code review feedback
-- \`/acli.finish\` — Prepare and clean up completed work
-
+${this.buildSpecKitBlock({
+      trigger: 'Before every task',
+      files: [
+        { path: '.specify/memory/constitution.md', note: 'All code must comply with the tech constraints and principles defined here.' },
+        { path: '.specify/memory/reference-architecture.md', note: 'Follow existing service boundaries, data models, and ADRs. Flag new architectural patterns.' },
+        { path: '.specify/specs/{feature}/spec.md + plan.md + tasks.md', note: 'Read and understand what to build before writing a single line of code.' },
+      ],
+      fallback: 'ask @architect to run `/acli.plan` first, or run `/acli.onboard` for an existing project.',
+      commands: [
+        { cmd: '/acli.implement', description: 'Step-by-step implementation of the next task' },
+        { cmd: '/acli.respond', description: 'Address code review feedback' },
+        { cmd: '/acli.finish', description: 'Prepare and clean up completed work' },
+      ],
+      extraSections: `
 ### Output Standards
-- All code must pass the quality gates defined in \`.specify/memory/quality-standards.md\`
+- All code must pass quality gates in \`.specify/memory/quality-standards.md\`
 - Run tests before marking any task done
-- Request \`/acli.critique\` review after completing implementation
+- Request \`/acli.critique\` review after completing implementation`,
+    })}
 `;
     }
 }

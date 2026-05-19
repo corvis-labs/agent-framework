@@ -1,4 +1,5 @@
 import { Agent } from '../core/Agent';
+import { PromptOptimizer } from '../core/PromptOptimizer';
 import { ArchitectAgent } from './architect/ArchitectAgent';
 import { SecurityAgent } from './security/SecurityAgent';
 import { FrontendDeveloperAgent } from './development/FrontendDeveloperAgent';
@@ -21,4 +22,5 @@ export {
   FrontendDeveloperAgent,
   BackendDeveloperAgent,
   QAAgent,
+  PromptOptimizer,
 };

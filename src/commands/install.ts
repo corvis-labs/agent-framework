@@ -35,6 +35,7 @@ const SKILLS = [
   'speckit-checklist.skill.md',
   'speckit-implement.skill.md',
   'speckit-onboard.skill.md',
+  'security-owasp-checklist.skill.md',
 ];
 
 export async function installSkills(projectRoot: string): Promise<void> {

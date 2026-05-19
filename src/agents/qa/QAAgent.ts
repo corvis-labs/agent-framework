@@ -14,6 +14,7 @@ export class QAAgent extends Agent {
     const config: AgentConfig = {
       platform: 'vscode',
       argumentHint: 'Review code, check spec alignment, generate tests, or assess quality gates',
+      tools: ['read_file', 'list_dir', 'grep_search', 'file_search', 'semantic_search'],
       handoffs: [
         { label: 'Return to Frontend for fixes', agent: 'frontend', prompt: 'Review complete. Address the feedback items marked 🔴 (blockers) before re-submitting.' },
         { label: 'Return to Backend for fixes', agent: 'backend', prompt: 'Review complete. Address the feedback items marked 🔴 (blockers) before re-submitting.' },
@@ -99,22 +100,20 @@ Line 42: User input is interpolated directly into the query.
 - Ask questions when intent is unclear rather than assuming it's wrong
 - End with encouragement and next steps
 
----
-
-## Spec-Kit Workflow Integration
-
-Before every review, load these files if they exist:
-
-1. **\`.specify/memory/quality-standards.md\`** — Mandatory. Read in full. Every rule is enforceable. Report each violation at the severity defined here.
-2. **\`.specify/memory/constitution.md\`** — Read in full. Enforce quality targets and coding principles.
-3. **\`.specify/memory/reference-architecture.md\`** — Flag any code that violates architecture patterns, component boundaries, or ADRs.
-4. **\`.specify/specs/{feature}/spec.md\`** — Validate that the implementation matches the acceptance criteria.
-
-If none exist: apply the checklist above and recommend \`/acli.onboard\` or \`/acli.plan\` to generate project-specific standards.
-
-### Slash Commands
-- \`/acli.critique\` — Structured code review against spec and quality standards
-- \`/acli.analyze\` — Cross-artifact consistency check (spec ↔ plan ↔ tasks ↔ implementation)
+${this.buildSpecKitBlock({
+      trigger: 'Before every review',
+      files: [
+        { path: '.specify/memory/quality-standards.md', note: 'Mandatory. Every rule is enforceable. Report each violation at the severity defined here.' },
+        { path: '.specify/memory/constitution.md', note: 'Enforce quality targets and coding principles.' },
+        { path: '.specify/memory/reference-architecture.md', note: 'Flag code that violates architecture patterns, component boundaries, or ADRs.' },
+        { path: '.specify/specs/{feature}/spec.md', note: 'Validate that implementation matches acceptance criteria.' },
+      ],
+      fallback: 'apply the checklist above and recommend `/acli.onboard` or `/acli.plan` to generate project-specific standards.',
+      commands: [
+        { cmd: '/acli.critique', description: 'Structured code review against spec and quality standards' },
+        { cmd: '/acli.analyze', description: 'Cross-artifact consistency check (spec ↔ plan ↔ tasks ↔ implementation)' },
+      ],
+    })}
 `;
   }
 

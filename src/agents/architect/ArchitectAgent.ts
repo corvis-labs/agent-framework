@@ -14,6 +14,7 @@ export class ArchitectAgent extends Agent {
     const config: AgentConfig = {
       platform: 'vscode',
       argumentHint: 'Design system architecture, write feature specs, create technical plans, or define project constitution',
+      tools: ['read_file', 'list_dir', 'grep_search', 'file_search', 'create_file', 'replace_string_in_file', 'semantic_search'],
       handoffs: [
         { label: 'Hand off to Frontend', agent: 'frontend', prompt: 'Technical plan is ready. Load spec.md, plan.md, and tasks.md then begin frontend implementation.', send: true },
         { label: 'Hand off to Backend', agent: 'backend', prompt: 'Technical plan is ready. Load spec.md, plan.md, and tasks.md then begin backend implementation.', send: true },
@@ -104,50 +105,36 @@ What becomes easier or harder because of this change?
 - Always present at least two options with trade-offs
 - Challenge assumptions respectfully — "What happens when X fails?"
 
----
-
-## Spec-Kit Workflow Integration
-
-### Load Project Context Before Every Task
-
-Before every task, load these files if they exist:
-
-1. **\`.specify/memory/constitution.md\`** — Read in full. All specs, architecture decisions, and technology choices must comply with the principles and constraints defined here.
-2. **\`.specify/memory/reference-architecture.md\`** — Read in full. Extend it, do not contradict it. Add new ADRs for any new decisions.
-3. **If neither exists**: run \`/acli.onboard\` (existing project) or \`/acli.constitution\` (new project) before proceeding.
-
-### Spec-Kit Phases (CONSTITUTION → SPECIFY → CLARIFY → PLAN → TASKS)
-
-This agent owns the upstream lifecycle:
-
-\`\`\`
-[CONSTITUTION] → [SPECIFY] → [CLARIFY] → [PLAN] → [TASKS] → implement
-       ↑              ↑           ↑           ↑        ↑
-                          (This Agent)
-\`\`\`
-
-### Slash Commands
-- \`/acli.constitution\` — Create or update project principles and tech constraints
-- \`/acli.onboard\` — Discover and document an existing project
-- \`/acli.specify\` — Write a technology-agnostic feature specification
-- \`/acli.clarify\` — Resolve ambiguities (max 5 questions per round)
-- \`/acli.plan\` — Create the technical implementation plan + ADRs
-- \`/acli.tasks\` — Break the plan into dependency-ordered task list
-- \`/acli.checklist\` — Generate quality gates (security, accessibility, performance)
-- \`/acli.analyze\` — Cross-artifact consistency check (spec ↔ plan ↔ tasks)
+${this.buildSpecKitBlock({
+      trigger: 'Before every task',
+      files: [
+        { path: '.specify/memory/constitution.md', note: 'Read in full. All specs, architecture decisions, and tech choices must comply with principles here.' },
+        { path: '.specify/memory/reference-architecture.md', note: 'Read in full. Extend it, do not contradict it. Add new ADRs for any new decisions.' },
+      ],
+      fallback: 'run `/acli.onboard` (existing project) or `/acli.constitution` (new project) before proceeding.',
+      commands: [
+        { cmd: '/acli.constitution', description: 'Create or update project principles and tech constraints' },
+        { cmd: '/acli.onboard', description: 'Discover and document an existing project' },
+        { cmd: '/acli.specify', description: 'Write a technology-agnostic feature specification' },
+        { cmd: '/acli.clarify', description: 'Resolve ambiguities (max 5 questions per round)' },
+        { cmd: '/acli.plan', description: 'Create the technical implementation plan + ADRs' },
+        { cmd: '/acli.tasks', description: 'Break the plan into dependency-ordered task list' },
+        { cmd: '/acli.checklist', description: 'Generate quality gates (security, accessibility, performance)' },
+        { cmd: '/acli.analyze', description: 'Cross-artifact consistency check (spec ↔ plan ↔ tasks)' },
+      ],
+      extraSections: `
+### Spec-Kit Lifecycle
+This agent owns: CONSTITUTION → SPECIFY → CLARIFY → PLAN → TASKS → implement
 
 ### Specification Standards
-- **Technology-agnostic**: Specs must contain zero framework, library, or tool names
-- **WHAT/WHY focus**: Describe desired outcomes, not HOW to implement
-- **Testable criteria**: Every acceptance criterion must be verifiable
-- **P0–P3 priorities**: Enable incremental delivery decisions
-- **Feature IDs**: Use \`###-short-name\` format (e.g., \`001-user-auth\`)
+- Technology-agnostic: zero framework/library names in specs
+- WHAT/WHY focus: desired outcomes, not HOW to implement
+- Testable criteria: every acceptance criterion must be verifiable
+- P0–P3 priorities; Feature IDs: \`###-short-name\` format
 
-### Output Files (in \`.specify/specs/{###-feature-name}/\`)
-- \`spec.md\` — Feature specification with acceptance criteria
-- \`plan.md\` — Technical plan + ADRs
-- \`tasks.md\` — Prioritized, dependency-ordered task list
-- \`checklists/\` — Security, accessibility, performance gates
+### Output Files (\`.specify/specs/{###-feature-name}/\`)
+\`spec.md\` · \`plan.md\` · \`tasks.md\` · \`checklists/\``,
+    })}
 `;
   }
 
