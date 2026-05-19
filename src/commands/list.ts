@@ -4,14 +4,15 @@ import * as fs from 'fs-extra';
 import { getPrebuiltAgents } from '../agents';
 import { AgentManager } from '../core/AgentManager';
 import { TargetPlatform } from '../core/Agent';
+import { HARNESSES } from './harness';
 
 interface ListOptions {
   installed?: boolean;
 }
 
 export async function listCommand(type: string, options: ListOptions): Promise<void> {
-  if (type !== 'agents' && type !== 'skills') {
-    console.error(chalk.red('Invalid type. Use "agents" or "skills"'));
+  if (type !== 'agents' && type !== 'skills' && type !== 'harnesses') {
+    console.error(chalk.red('Invalid type. Use "agents", "skills", or "harnesses"'));
     process.exit(1);
   }
 
@@ -20,6 +21,8 @@ export async function listCommand(type: string, options: ListOptions): Promise<v
 
   if (type === 'agents') {
     await listAgents(projectRoot, configPath, options);
+  } else if (type === 'harnesses') {
+    await listHarnesses();
   } else {
     await listSkills(projectRoot, configPath, options);
   }
@@ -181,4 +184,20 @@ function parseSkillMetadata(content: string): any {
   }
 
   return metadata;
+}
+
+async function listHarnesses(): Promise<void> {
+  console.log(chalk.bold.cyan('\nAvailable Harnesses\n'));
+  console.log(chalk.gray('─'.repeat(62)));
+
+  for (const h of HARNESSES) {
+    console.log(`\n  ${chalk.cyan.bold(h.id.padEnd(12))}  ${h.description}`);
+  }
+
+  console.log(chalk.gray('\n' + '─'.repeat(62)));
+  console.log('');
+  console.log(chalk.gray('Usage:'));
+  console.log(`  ${chalk.cyan('acli use <harness>')}      ${chalk.gray('# e.g. acli use cursor')}`);
+  console.log(`  ${chalk.cyan('acli use <harness> -f')}   ${chalk.gray('# overwrite existing config')}`);
+  console.log('');
 }

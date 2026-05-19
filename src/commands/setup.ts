@@ -97,6 +97,26 @@ function checkNode(): { available: boolean; version?: string } {
   return { available: false };
 }
 
+/**
+ * Return IDs of harnesses that appear to be configured in the project already,
+ * based on the presence of their canonical config files / directories.
+ */
+function detectHarnessSetup(projectRoot: string): string[] {
+  const markers: Array<{ id: string; check: string }> = [
+    { id: 'copilot',  check: path.join(projectRoot, '.github', 'agents') },
+    { id: 'cursor',   check: path.join(projectRoot, '.cursor', 'rules') },
+    { id: 'claude',   check: path.join(projectRoot, 'AGENTS.md') },
+    { id: 'windsurf', check: path.join(projectRoot, '.windsurf', 'rules') },
+    { id: 'opencode', check: path.join(projectRoot, '.opencode', 'agents') },
+    { id: 'cline',    check: path.join(projectRoot, '.clinerules') },
+    { id: 'continue', check: path.join(projectRoot, '.continue', 'config.yaml') },
+    { id: 'aider',    check: path.join(projectRoot, '.aider.conf.yml') },
+    { id: 'gemini',   check: path.join(projectRoot, 'GEMINI.md') },
+    { id: 'pi',       check: path.join(projectRoot, '.pi', 'settings.json') },
+  ];
+  return markers.filter((m) => fs.pathExistsSync(m.check)).map((m) => m.id);
+}
+
 // ─── Dependency Installation ─────────────────────────────────────────────────
 
 /**
@@ -386,6 +406,7 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
     const brew = checkBrew();
     const specKit = commandExists('specify');
     const beads = commandExists('bd');
+    const harnesses = detectHarnessSetup(projectRoot);
 
     const ok = chalk.green('OK');
     const missing = chalk.red('MISSING');
@@ -399,6 +420,7 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
     }
     console.log(`  spec-kit (specify)  ${specKit ? ok : missing}`);
     console.log(`  beads (bd)      ${beads ? ok : missing}`);
+    console.log(`  harnesses       ${harnesses.length > 0 ? `${ok}  ${chalk.gray(harnesses.join(', '))}` : chalk.yellow('none detected')}`);
     console.log('');
 
     if (!specKit || !beads) {
@@ -536,8 +558,38 @@ export async function setupCommand(options: SetupOptions): Promise<void> {
     console.log('');
   }
 
+  // Snapshot which harnesses exist BEFORE init so we know if we should offer setup
+  const preExistingHarnesses = detectHarnessSetup(projectRoot);
+
   // Auto-run acli init
   console.log(chalk.cyan.bold('\nScaffolding project...\n'));
   const { initCommand } = await import('./init');
   await initCommand({ dir: options.dir, force: false });
+
+  // Step: Harness setup — offer if nothing was configured before this run
+  if (preExistingHarnesses.length === 0) {
+    console.log('');
+    console.log(chalk.cyan.bold('No AI coding harness detected.\n'));
+    const { HARNESSES, useCommand: runHarness } = await import('./harness');
+    const { harnessId } = await inquirer.prompt<{ harnessId: string | null }>([
+      {
+        type: 'list',
+        name: 'harnessId',
+        message: 'Set up an AI coding harness now?',
+        choices: [
+          ...HARNESSES.map((h) => ({
+            name: `${chalk.cyan(h.id.padEnd(12))}  ${h.description}`,
+            value: h.id,
+          })),
+          new inquirer.Separator(),
+          { name: chalk.gray('Skip for now'), value: null },
+        ],
+      },
+    ]);
+    if (harnessId) {
+      await runHarness(harnessId as string, { dir: options.dir, force: false });
+    }
+  } else {
+    console.log(chalk.green(`\n  Harness already configured: ${preExistingHarnesses.join(', ')}\n`));
+  }
 }

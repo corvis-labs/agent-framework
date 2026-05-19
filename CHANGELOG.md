@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-05-19
+
+### Added
+- **`acli use <harness>` command** — set up any of 11 AI coding harnesses in one command: `copilot`, `cursor`, `claude`, `windsurf`, `opencode`, `aider`, `codex`, `gemini`, `pi`, `cline`, `continue`.
+- **Pi harness** (`acli use pi`) — writes `AGENTS.md` (via the `claude` platform emitter) and `.pi/settings.json` pointing skills at `.agents/skills/`. Install: `npm install -g @earendil-works/pi-coding-agent`.
+- **CLI detection and install hints** — `acli use list` now shows a `✔` badge next to each harness whose CLI binary is already on `$PATH`. After setup, `acli use <harness>` prints whether the tool is installed and its detected version.
+- **`--install` / `-i` flag** (`acli use <harness> --install`) — automatically runs the first available install command (respects `npm`, `brew`, `pipx`, `uv`, `curl`) if the harness CLI is not found.
+- **`InstallOption` type exported from `harness.ts`** — `{ manager: string; cmd: string }` for ordered install methods per harness.
+- **Launch hint** — after a successful setup where the tool is installed, the summary line shows `Launch: <cmd>` so developers know exactly how to start the tool.
+- **`acli list harnesses`** updated table with richer usage footer showing the `--install` flag.
+
 ## [3.5.0] - 2026-05-19
 
 ### Added

@@ -23,6 +23,7 @@ import {
   agencyListCommand,
   agencySearchCommand,
 } from './commands/agency';
+import { useCommand, harnessListCommand } from './commands/harness';
 
 const program = new Command();
 
@@ -43,7 +44,7 @@ program
 // List command
 program
   .command('list <type>')
-  .description('List available agents or skills (type: agents|skills)')
+  .description('List available agents, skills, or harnesses (type: agents|skills|harnesses)')
   .option('-i, --installed', 'Show only installed items')
   .action(listCommand);
 
@@ -156,6 +157,20 @@ agency
   .option('--division <division>', 'Narrow search to a specific division')
   .option('--refresh', 'Force-refresh the local agent index cache')
   .action((query, opts) => agencySearchCommand(query, opts));
+
+// Use command — set up a specific AI coding harness
+program
+  .command('use <harness>')
+  .description(
+    'Set up an AI coding harness in the current project.\n' +
+    '  Harnesses: copilot, cursor, claude, windsurf, opencode,\n' +
+    '             cline, continue, aider, codex, gemini, pi\n' +
+    '  Run "acli use list" to see all harnesses.',
+  )
+  .option('-d, --dir <directory>', 'Target directory', '.')
+  .option('-f, --force', 'Overwrite existing harness config files')
+  .option('-i, --install', 'Auto-install the harness CLI/extension if not found')
+  .action(useCommand);
 
 // Parse arguments
 program.parse(process.argv);
