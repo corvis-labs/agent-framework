@@ -18,6 +18,11 @@ import {
   extensionsCreateCommand,
   extensionsPackCommand,
 } from './commands/extensions';
+import {
+  agencyInstallCommand,
+  agencyListCommand,
+  agencySearchCommand,
+} from './commands/agency';
 
 const program = new Command();
 
@@ -122,6 +127,35 @@ extensions
   .description('Package an installed plugin as a distributable zip')
   .option('-o, --output <filename>', 'Output zip filename (default: <name>-v<version>.zip)')
   .action(extensionsPackCommand);
+
+// Agency command group
+const agency = program
+  .command('agency')
+  .description(
+    'Browse and install community agents from msitarzewski/agency-agents',
+  );
+
+agency
+  .command('install <name>')
+  .description('Install a community agent by slug or keyword')
+  .option('--division <division>', 'Narrow search to a specific division')
+  .option('-f, --force', 'Overwrite if already installed')
+  .option('--refresh', 'Force-refresh the local agent index cache')
+  .action((name, opts) => agencyInstallCommand(name, opts));
+
+agency
+  .command('list')
+  .description('List all available agents, optionally filtered by division')
+  .option('--division <division>', 'Show only agents in this division')
+  .option('--refresh', 'Force-refresh the local agent index cache')
+  .action((opts) => agencyListCommand(opts));
+
+agency
+  .command('search <query>')
+  .description('Search available agents by keyword')
+  .option('--division <division>', 'Narrow search to a specific division')
+  .option('--refresh', 'Force-refresh the local agent index cache')
+  .action((query, opts) => agencySearchCommand(query, opts));
 
 // Parse arguments
 program.parse(process.argv);

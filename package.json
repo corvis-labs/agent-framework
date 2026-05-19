@@ -1,6 +1,6 @@
 {
   "name": "agent-framework-cli",
-  "version": "3.1.0",
+  "version": "3.3.0",
   "description": "Multi-platform AI agent framework — deploy specification-driven agents to GitHub Copilot, Cursor, Claude Code, Windsurf, and the Open Plugins standard in one command",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",

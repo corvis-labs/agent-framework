@@ -1,24 +1,24 @@
 import { Agent } from '../core/Agent';
 import { ArchitectAgent } from './architect/ArchitectAgent';
 import { SecurityAgent } from './security/SecurityAgent';
-import { DevelopmentAgent } from './development/DevelopmentAgent';
+import { FrontendDeveloperAgent } from './development/FrontendDeveloperAgent';
+import { BackendDeveloperAgent } from './development/BackendDeveloperAgent';
 import { QAAgent } from './qa/QAAgent';
-import { OrchestratorAgent } from './orchestrator/OrchestratorAgent';
 
 export function getPrebuiltAgents(): Record<string, Agent> {
   return {
     architect: new ArchitectAgent(),
-    security: new SecurityAgent(),
-    development: new DevelopmentAgent(),
+    frontend: new FrontendDeveloperAgent(),
+    backend: new BackendDeveloperAgent(),
     qa: new QAAgent(),
-    orchestrator: new OrchestratorAgent()
+    security: new SecurityAgent(),
   };
 }
 
 export {
   ArchitectAgent,
   SecurityAgent,
-  DevelopmentAgent,
+  FrontendDeveloperAgent,
+  BackendDeveloperAgent,
   QAAgent,
-  OrchestratorAgent
 };

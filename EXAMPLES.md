@@ -70,6 +70,37 @@ acli update   # re-emits all agents to new + existing platforms
 
 ---
 
+## Installing a Community Agent
+
+The Agency roster provides 140+ specialist agents across engineering, design, marketing, and more.
+
+```bash
+# See what’s available
+acli agency list
+acli agency list --division engineering
+
+# Find a specific type
+acli agency search "data engineer"
+acli agency search "security"
+
+# Install by full slug
+acli agency install engineering-senior-developer
+
+# Install by keyword (installs if there’s exactly one match)
+acli agency install senior-developer
+
+# Scope to a division to disambiguate
+acli agency install developer --division engineering
+```
+
+On a project targeting Copilot + Claude, the command above writes:
+```
+.github/agents/engineering-senior-developer.agent.md
+.claude/agents/engineering-senior-developer.md
+```
+
+---
+
 ## Custom Plugin: Domain-Specific Agent
 
 Build a plugin for a specific domain (e.g., database migrations):

@@ -57,14 +57,32 @@ acli setup
 
 ## Install Additional Agents
 
-All 5 agents are installed automatically during `acli init`. To reinstall or add to a new platform:
+All 5 framework agents are installed automatically during `acli init`. To reinstall or add to a new platform:
 
 ```bash
 acli install orchestrator
 acli install architect
 ```
 
-Each `acli install` emits agent files to all platforms listed in `.agent-framework.json`.
+## Install Community Agents (Agency Roster)
+
+Browse and install 140+ specialist agents from the [Agency community roster](https://github.com/msitarzewski/agency-agents):
+
+```bash
+# Browse all agents grouped by division
+acli agency list
+
+# Search by keyword
+acli agency search "security engineer"
+
+# Install by slug (matches partial names too)
+acli agency install engineering-frontend-developer
+acli agency install frontend-developer         # keyword match
+```
+
+Agents install to all platforms in `.agent-framework.json`. Use `--force` to overwrite an existing install and `--refresh` to pull the latest roster.
+
+---
 
 ## Use in Your AI Editor
 
@@ -143,28 +161,6 @@ acli extensions pack my-plugin   # → my-plugin-v1.0.0.zip
 ```
 
 ---
-
-## Agent Interaction
-
-Agents are available as `@agent` mentions (Copilot, Cursor) or loaded automatically (Claude Code, Windsurf):
-
-| Agent | Invocation |
-|---|---|
-| `@orchestrator` | Full lifecycle coordination |
-| `@architect` | Specs, plans, ADRs |
-| `@security` | OWASP, threat modeling |
-| `@development` | TDD implementation |
-| `@qa` | Code review, test coverage |
-
-
-## Install Additional Agents
-
-All 5 agents are installed automatically during `acli init`. To reinstall a specific agent:
-
-```bash
-acli install orchestrator
-acli install architect
-```
 
 ## Use in VS Code
 

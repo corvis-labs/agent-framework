@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-05-19
+
+### Added
+- **`@frontend` agent** — Frontend Developer, powered by `engineering-frontend-developer` from the Agency community roster. Specialises in React/Vue/Angular, Core Web Vitals, and WCAG 2.1 AA accessibility.
+- **`@backend` agent** — Backend Architect, powered by `engineering-backend-architect`. Covers scalable system design, database architecture, API development, and cloud infrastructure.
+
+### Changed
+- **`@architect`** — now powered by `engineering-software-architect`: domain-driven design, ADR templates, C4-model communication, and trade-off analysis. Retains full Spec-Kit upstream workflow (CONSTITUTION → SPECIFY → CLARIFY → PLAN → TASKS).
+- **`@qa`** — now powered by `engineering-code-reviewer`: 🔴/🟡/💭 priority markers, structured review comment format, spec alignment validation.
+- **`@security`** — now powered by `engineering-security-engineer`: STRIDE threat modeling, CVSS severity classification, 4-phase security workflow, OWASP Top 10 + CWE Top 25 coverage.
+- All agents updated to direct agent-to-agent handoffs (architect ↔ frontend/backend ↔ qa/security).
+
+### Removed
+- **`@orchestrator` agent** — removed; workflow phases are now coordinated directly via Spec-Kit slash commands and agent handoffs.
+- **`@development` agent** — replaced by `@frontend` and `@backend`.
+
+## [3.2.0] - 2026-05-19
+
+### Added
+- **`acli agency install <name>`** — install any agent from the [Agency community roster](https://github.com/msitarzewski/agency-agents) directly into all configured platforms
+- **`acli agency list [--division <name>]`** — browse 140+ community agents grouped by division
+- **`acli agency search <query>`** — search agents by keyword across all divisions
+- Platform-aware output for all five targets (Copilot, Cursor, Claude Code, Windsurf, Open Plugins)
+- 24-hour OS-level index cache to avoid GitHub API rate limits; refresh with `--refresh`
+
 ## [3.1.0] - 2026-05-19
 
 ### Added

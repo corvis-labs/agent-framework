@@ -130,6 +130,42 @@ Run `/acli.run <feature>` — the orchestrator drives everything. You only step 
 
 ---
 
+## Agency Roster
+
+Install any of 140+ community-built agents from the [Agency roster](https://github.com/msitarzewski/agency-agents) — organized across engineering, design, marketing, product, and more.
+
+```bash
+# Browse all available agents by division
+acli agency list
+
+# Narrow to a specific division
+acli agency list --division engineering
+
+# Search by keyword
+acli agency search "data engineer"
+acli agency search "frontend"
+
+# Install by slug or keyword
+acli agency install engineering-frontend-developer
+acli agency install frontend-developer          # matches by keyword
+acli agency install engineering/frontend-developer  # division-scoped
+
+# Force overwrite an existing install
+acli agency install engineering-frontend-developer --force
+```
+
+Agents are installed to all platforms in `.agent-framework.json` and the index is cached locally for 24 hours. Use `--refresh` to fetch the latest roster.
+
+| Platform | Output path |
+|---|---|
+| GitHub Copilot | `.github/agents/{slug}.agent.md` |
+| Cursor | `.cursor/rules/{slug}.mdc` |
+| Claude Code | `.claude/agents/{slug}.md` |
+| Windsurf | `.windsurf/rules/{slug}.md` |
+| Open Plugins | `.agents/plugins/agency-agents/agents/{slug}.agent.md` |
+
+---
+
 ## Extension Ecosystem
 
 Extend the framework with additional agents, skills, and rules via the `acli extensions` command.
@@ -188,11 +224,14 @@ AGENTS.md         ← Claude Code agent registry (auto-generated)
 |---|---|
 | `acli setup [--check]` | Install dependencies + scaffold project (interactive) |
 | `acli init [--platforms …]` | Initialise framework, select target platforms |
-| `acli install <agent>` | Install an agent to all configured platforms |
+| `acli install <agent>` | Install a framework agent to all configured platforms |
 | `acli remove <agent>` | Remove an agent from all configured platforms |
 | `acli list agents\|skills` | List available or installed agents/skills |
 | `acli update [agent]` | Re-emit agents to all configured platforms |
 | `acli config` | View or modify framework configuration |
+| `acli agency install <name>` | Install a community agent from the Agency roster |
+| `acli agency list [--division]` | Browse 140+ community agents by division |
+| `acli agency search <query>` | Search community agents by keyword |
 | `acli extensions list` | List installed extensions |
 | `acli extensions add <name>` | Install an extension |
 | `acli extensions remove <name>` | Remove an extension |

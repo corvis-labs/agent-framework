@@ -110,15 +110,15 @@ Agents are automatically emitted to all configured platforms: ${selectedPlatform
 
 Install all agents:
 \`\`\`bash
-acli install orchestrator
+acli install architect
 \`\`\`
 
 Or install individually:
-- \`acli install architect\`    — Requirements, specifications, and architecture
-- \`acli install security\`     — Security analysis
-- \`acli install development\`  — Code implementation
-- \`acli install qa\`           — Testing and code quality
-- \`acli install orchestrator\` — Multi-agent coordination
+- \`acli install architect\`  — System design, specifications, and technical planning
+- \`acli install frontend\`   — Frontend and UI implementation
+- \`acli install backend\`    — Backend services, APIs, and databases
+- \`acli install qa\`         — Code review and quality assurance
+- \`acli install security\`   — Security engineering and threat modeling
 
 ## Usage
 
@@ -217,9 +217,8 @@ acli create skill
 
     console.log('');
     console.log(chalk.white('Next steps:'));
-    console.log(chalk.cyan('  /acli.onboard') + chalk.gray('      - Onboard an existing project (brownfield)'));
     console.log(chalk.cyan('  /acli.constitution') + chalk.gray(' - Create your project constitution'));
-    console.log(chalk.cyan('  /acli.run') + chalk.gray('          - Run the full fleet orchestrator'));
+    console.log(chalk.cyan('  /acli.onboard') + chalk.gray('      - Onboard an existing project (brownfield)'));
     console.log(chalk.cyan('  /acli.specify') + chalk.gray('      - Define what you want to build'));
     console.log('');
     console.log(chalk.white('Documentation: ') + chalk.gray('https://github.com/ipranjal/agent-framework'));
